@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Letter Stacker · Dark Mode</title>
+  <title>Piece Stacker v3</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
@@ -348,10 +348,12 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1>Letter Stacker</h1>
-        <div class="subtitle">Crop, reposition & combine 2–4 images into a letter-sized page</div>
-      </div>
-      <div class="letter-badge" id="paperBadge">US Letter · 8.5 × 11 in</div>
+        <h1>Piece Stacker</h1>
+        <div class="subtitle">Stack per bar of photos of pieces</div>
+	  </div>
+      <button class="btn" id="uploadBtn" style="padding: 10px 20px; font-size:0.8rem; display: inline-block; margin-right: 0px;">
+            <span>📁</span> Open Files (2-4 images)
+        </button>
     </div>
 
     <div class="main-content">
@@ -361,9 +363,7 @@
         </div>
 
         <div class="upload-btn">
-          <button class="btn" id="uploadBtn" style="padding: 10px 20px; font-size:0.8rem;">
-            <span>📁</span> Choose images (2–4)
-          </button>
+		  <div class="letter-badge" id="paperBadge">US Letter · 8.5 × 11 in</div>
           <input type="file" id="fileInput" accept="image/*" multiple>
           <button class="btn btn-secondary" id="clearBtn" style="padding: 10px 16px;">Clear</button>
         </div>

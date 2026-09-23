@@ -3,13 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Piece Stamper</title>
+<title>Piece Stamper v3</title>
 <style>
+    :root {
+        --bg-app: #0a0a0a; --bg-canvas: #080808; --bg-panel: #0d0d0d;
+        --bg-container: #111111; --bg-section: #1a1a1a; --bg-inset: #1f1f1f;
+        --bg-inset-hover: #2a2a2a; --bg-chip: #252525;
+        --border-subtle: #2a2a2a; --border-default: #333333; --border-strong: #444444;
+        --text-primary: #ffffff; --text-secondary: #dddddd; --text-tertiary: #cccccc;
+        --text-muted: #aaaaaa; --text-subtle: #888888; --text-faint: #666666;
+        --accent: #7851A9; --accent-light: #9A6BBE; --accent-soft: #b8a0d4;
+        --success: #2d5a27; --success-border: #3a6e32; --success-hover: #3a6e32;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #0a0a0a;
+        background: var(--bg-app);
         height: 100vh;
         overflow: hidden;
         padding: 12px;
@@ -22,8 +32,8 @@
         width: 100%;
         max-width: 1600px;
         height: calc(100vh - 24px);
-        background: #111111;
-        border: 1px solid #2a2a2a;
+        background: var(--bg-container);
+        border: 1px solid var(--border-subtle);
         border-radius: 16px;
         display: flex;
         flex-direction: column;
@@ -36,21 +46,21 @@
         justify-content: space-between;
         align-items: center;
         padding: 12px 20px;
-        border-bottom: 1px solid #2a2a2a;
+        border-bottom: 1px solid var(--border-subtle);
         flex-shrink: 0;
     }
 
     .header-title h1 {
         font-size: 1.2rem;
         font-weight: 500;
-        color: #ffffff;
+        color: var(--text-primary);
         letter-spacing: -0.01em;
         line-height: 1.2;
     }
 
     .header-title .subtitle {
         font-size: 0.8rem;
-        color: #888;
+        color: var(--text-subtle);
         margin-top: 2px;
     }
 
@@ -66,9 +76,9 @@
 
     .image-panel {
         flex: 1;
-        background: #0d0d0d;
+        background: var(--bg-panel);
         border-radius: 12px;
-        border: 1px solid #2a2a2a;
+        border: 1px solid var(--border-subtle);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -80,18 +90,18 @@
         align-items: center;
         justify-content: space-between;
         padding: 8px 12px;
-        border-bottom: 1px solid #2a2a2a;
-        background: #111111;
+        border-bottom: 1px solid var(--border-subtle);
+        background: var(--bg-container);
         flex-shrink: 0;
     }
 
     .page-info {
         font-size: 0.75rem;
-        color: #888;
-        background: #1a1a1a;
+        color: var(--text-subtle);
+        background: var(--bg-section);
         padding: 4px 12px;
         border-radius: 20px;
-        border: 1px solid #2a2a2a;
+        border: 1px solid var(--border-subtle);
     }
 
     .btn-group { display: flex; gap: 6px; }
@@ -103,7 +113,7 @@
         align-items: center;
         justify-content: center;
         padding: 16px;
-        background: #080808;
+        background: var(--bg-canvas);
         position: relative;
     }
 
@@ -121,19 +131,19 @@
     .tools-panel {
         width: 320px;
         flex-shrink: 0;
-        background: #111111;
+        background: var(--bg-panel);
         border-radius: 12px;
-        border: 1px solid #2a2a2a;
+        border: 1px solid var(--border-subtle);
         display: flex;
         flex-direction: column;
         overflow-y: auto;
         padding: 14px 14px 20px 14px;
-        gap: 18px;
+        gap: 14px;
     }
 
     .section {
-        background: #1a1a1a;
-        border: 1px solid #2a2a2a;
+        background: var(--bg-section);
+        border: 1px solid var(--border-subtle);
         border-radius: 10px;
         padding: 14px;
     }
@@ -145,21 +155,23 @@
         margin-bottom: 12px;
     }
 
-    .section-header h3 {
+    .section-header h3,
+    .section > h3 {
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #888;
+        color: var(--text-subtle);
     }
+    .section > h3 { margin-bottom: 12px; }
 
     .badge {
         background: rgba(120, 81, 169, 0.25);
-        color: #b8a0d4;
+        color: var(--accent-soft);
         font-size: 0.65rem;
         padding: 3px 8px;
         border-radius: 20px;
-        border: 1px solid #7851A9;
+        border: 1px solid var(--accent);
     }
 
     .button-full {
@@ -168,19 +180,46 @@
         border-radius: 10px;
         font-size: 0.85rem;
         font-weight: 500;
-        border: 1px solid #9A6BBE;
-        background: #7851A9;
+        border: 1px solid var(--accent-light);
+        background: var(--accent);
         color: #ffffff;
         cursor: pointer;
         transition: 0.2s;
         font-family: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin: 4px 0;
     }
 
     .button-full:hover {
-        background: #9A6BBE;
+        background: var(--accent-light);
         transform: translateY(-1px);
         box-shadow: 0 6px 14px rgba(120, 81, 169, 0.4);
     }
+
+    .button-full:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .button-full:disabled:hover {
+        background: var(--accent);
+        transform: none;
+        box-shadow: none;
+    }
+
+    .button-full.success {
+        background: var(--success);
+        border-color: var(--success-border);
+    }
+    .button-full.success:hover {
+        background: var(--success-hover);
+        box-shadow: 0 6px 14px rgba(45, 90, 39, 0.4);
+    }
+    .button-full.success:disabled:hover { background: var(--success); }
 
     .button-full.secondary {
         background: #2d2d2d;
@@ -195,9 +234,9 @@
     }
 
     .btn {
-        background: #1f1f1f;
-        color: #ddd;
-        border: 1px solid #333;
+        background: var(--bg-inset);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-default);
         padding: 8px 12px;
         border-radius: 8px;
         font-size: 0.7rem;
@@ -207,15 +246,15 @@
         font-family: inherit;
     }
 
-    .btn:hover { background: #2a2a2a; border-color: #555; color: #fff; }
+    .btn:hover { background: var(--bg-inset-hover); border-color: var(--border-strong); color: #fff; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-success { background: #2d5a27; border-color: #3a6e32; color: #fff; }
-    .btn-success:hover { background: #3a6e32; border-color: #4a8e3e; }
+    .btn-success { background: var(--success); border-color: var(--success-border); color: #fff; }
+    .btn-success:hover { background: var(--success-border); border-color: #4a8e3e; }
 
     .tabs {
         display: flex;
-        background: #0d0d0d;
-        border: 1px solid #333;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-default);
         border-radius: 8px;
         padding: 3px;
         gap: 3px;
@@ -226,7 +265,7 @@
         flex: 1;
         background: transparent;
         border: none;
-        color: #aaa;
+        color: var(--text-muted);
         font-size: 0.7rem;
         padding: 7px 8px;
         border-radius: 6px;
@@ -236,7 +275,7 @@
         font-weight: 500;
     }
 
-    .tabs button.active { background: #7851A9; color: #fff; }
+    .tabs button.active { background: var(--accent); color: #fff; }
     .tabs button:not(.active):hover { background: #222; color: #fff; }
 
     .tab-content { display: none; }
@@ -255,15 +294,15 @@
         align-items: center;
     }
 
-    label { font-size: 0.75rem; color: #ccc; }
+    label { font-size: 0.75rem; color: var(--text-tertiary); }
 
     .value-input {
         width: 60px;
-        background: #252525;
-        border: 1px solid #333;
+        background: var(--bg-chip);
+        border: 1px solid var(--border-default);
         border-radius: 12px;
         padding: 4px 8px;
-        color: #aaa;
+        color: var(--text-muted);
         font-size: 0.7rem;
         text-align: right;
         font-family: inherit;
@@ -271,7 +310,7 @@
         transition: 0.2s;
     }
 
-    .value-input:focus { border-color: #7851A9; color: #fff; background: #2a2a2a; }
+    .value-input:focus { border-color: var(--accent); color: #fff; background: #2a2a2a; }
 
     .value-input::-webkit-outer-spin-button,
     .value-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -281,7 +320,7 @@
         -webkit-appearance: none;
         width: 100%;
         height: 4px;
-        background: #2a2a2a;
+        background: var(--border-subtle);
         border-radius: 4px;
         outline: none;
         margin: 6px 0;
@@ -292,15 +331,15 @@
         width: 14px;
         height: 14px;
         border-radius: 50%;
-        background: #7851A9;
-        border: 2px solid #9A6BBE;
+        background: var(--accent);
+        border: 2px solid var(--accent-light);
         cursor: pointer;
         transition: 0.1s;
     }
 
     input[type="range"].slider::-webkit-slider-thumb:hover {
         transform: scale(1.15);
-        background: #9A6BBE;
+        background: var(--accent-light);
     }
 
     .toggle-switch {
@@ -336,8 +375,8 @@
     }
 
     .toggle-switch input:checked + .toggle-slider {
-        background: #7851A9;
-        border-color: #9A6BBE;
+        background: var(--accent);
+        border-color: var(--accent-light);
     }
 
     .toggle-switch input:checked + .toggle-slider:before {
@@ -357,8 +396,8 @@
         width: 48px;
         height: 48px;
         border-radius: 8px;
-        border: 2px solid #333;
-        background: #0d0d0d;
+        border: 2px solid var(--border-default);
+        background: var(--bg-panel);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -370,12 +409,12 @@
     }
 
     .stamp-thumb:hover {
-        border-color: #7851A9;
+        border-color: var(--accent);
         transform: scale(1.05);
     }
 
     .stamp-thumb.selected {
-        border-color: #7851A9;
+        border-color: var(--accent);
         box-shadow: 0 0 0 2px rgba(120, 81, 169, 0.3);
     }
 
@@ -402,59 +441,84 @@
 
     .hint {
         font-size: 0.65rem;
-        color: #666;
+        color: var(--text-faint);
         font-style: italic;
         margin-top: 4px;
     }
 
-    .modal-overlay {
+    .modal {
+        display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        background-color: rgba(0,0,0,0.8);
         backdrop-filter: blur(4px);
-        display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
-        visibility: hidden;
-        opacity: 0;
-        transition: 0.2s;
     }
 
-    .modal-overlay.open { visibility: visible; opacity: 1; }
+    .modal.active { display: flex; }
 
     .modal-content {
-        background: #1a1a1a;
-        border: 1px solid #333;
+        background: var(--bg-section);
+        border: 1px solid var(--border-default);
         border-radius: 16px;
         padding: 20px;
-        width: 320px;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+        width: 360px;
+        max-width: 90vw;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
     }
 
     .modal-content h3 {
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: #fff;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
         font-weight: 500;
     }
 
-    .modal-content input {
-        width: 100%;
-        padding: 10px 12px;
-        background: #0d0d0d;
-        border: 1px solid #333;
-        border-radius: 8px;
-        color: #fff;
+    .modal-content p {
         font-size: 0.8rem;
-        font-family: inherit;
-        margin-bottom: 16px;
-        outline: none;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+        line-height: 1.5;
     }
 
-    .modal-content input:focus { border-color: #7851A9; }
+    .modal-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+    }
 
-    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-buttons .btn { padding: 8px 16px; }
+
+    .modal-file-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 10px 0 4px 0;
+    }
+
+    .modal-file-row label {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+
+    .modal-file-row input[type="text"] {
+        flex: 1;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: #fff;
+        font-size: 0.78rem;
+        font-family: inherit;
+        outline: none;
+        min-width: 0;
+    }
+
+    .modal-file-row input[type="text"]:focus { border-color: var(--accent); }
 
     .flex-row { display: flex; align-items: center; gap: 10px; }
     .mt-8 { margin-top: 8px; }
@@ -467,9 +531,9 @@
     }
 
     .corner-picker button {
-        background: #0d0d0d;
-        border: 1px solid #333;
-        color: #aaa;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-default);
+        color: var(--text-muted);
         padding: 8px;
         border-radius: 6px;
         font-size: 0.68rem;
@@ -479,7 +543,7 @@
     }
 
     .corner-picker button:hover { background: #222; color: #fff; border-color: #555; }
-    .corner-picker button.active { background: #7851A9; border-color: #9A6BBE; color: #fff; }
+    .corner-picker button.active { background: var(--accent); border-color: var(--accent-light); color: #fff; }
 
     .canvas-badge {
         position: absolute;
@@ -491,18 +555,18 @@
         padding: 4px 10px;
         border-radius: 20px;
         backdrop-filter: blur(4px);
-        border: 1px solid #9A6BBE;
+        border: 1px solid var(--accent-light);
         pointer-events: none;
     }
 
     .tools-panel::-webkit-scrollbar { width: 6px; }
-    .tools-panel::-webkit-scrollbar-track { background: #0d0d0d; border-radius: 10px; }
-    .tools-panel::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
-    .tools-panel::-webkit-scrollbar-thumb:hover { background: #444; }
+    .tools-panel::-webkit-scrollbar-track { background: var(--bg-panel); border-radius: 10px; }
+    .tools-panel::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 10px; }
+    .tools-panel::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
     .default-size-panel {
-        background: #0d0d0d;
-        border: 1px solid #333;
+        background: var(--bg-panel);
+        border: 1px solid var(--border-default);
         border-radius: 8px;
         padding: 10px 12px;
         margin-top: 12px;
@@ -510,7 +574,7 @@
 
     .default-size-panel .stamp-name {
         font-size: 0.7rem;
-        color: #b8a0d4;
+        color: var(--accent-soft);
         font-weight: 500;
         margin-bottom: 8px;
         display: flex;
@@ -522,10 +586,82 @@
         width: 20px;
         height: 20px;
         border-radius: 4px;
-        border: 1px solid #333;
-        background: #0a0a0a;
+        border: 1px solid var(--border-default);
+        background: var(--bg-app);
         padding: 1px;
         object-fit: contain;
+    }
+
+    /* ---- Export section (Photo-Stacker style) ---- */
+    .paper-format-row {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+
+    .paper-format-row select {
+        flex: 1;
+        background: var(--bg-inset);
+        color: var(--text-primary);
+        border: 1px solid var(--border-default);
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-family: inherit;
+        cursor: pointer;
+        outline: none;
+        min-width: 0;
+        transition: 0.2s;
+    }
+
+    .paper-format-row select:focus { border-color: var(--accent); }
+
+    .paper-format-row select option {
+        background: var(--bg-inset);
+        color: var(--text-primary);
+    }
+
+    .export-status {
+        font-size: 0.7rem;
+        color: var(--accent-soft);
+        text-align: center;
+        margin-top: 8px;
+        min-height: 16px;
+    }
+
+    .filename-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+
+    .filename-row label {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        flex-shrink: 0;
+    }
+
+    .filename-row input[type="text"] {
+        flex: 1;
+        background: var(--bg-inset);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: #fff;
+        font-size: 0.75rem;
+        font-family: inherit;
+        outline: none;
+        min-width: 0;
+        transition: 0.2s;
+    }
+
+    .filename-row input[type="text"]:focus { border-color: var(--accent); }
+
+    .filename-row .ext {
+        font-size: 0.7rem;
+        color: var(--text-faint);
     }
 </style>
 </head>
@@ -533,12 +669,11 @@
 <div class="editor-container">
     <header class="editor-header">
         <div class="header-title">
-            <h1>Piece Editor</h1>
-            <div class="subtitle">stamp PNGs onto PDF & images</div>
+            <h1>Piece Stamper</h1>
+            <div class="subtitle">Stamp branding onto pieces (pdf and images)</div>
         </div>
         <div class="header-actions">
-            <button class="btn" id="btnOpenFiles">📂 Open files</button>
-            <button class="btn" id="btnExportPdf">⬇ Export PDF</button>
+            <button class="btn" id="btnOpenFiles" style="padding:10px 20px; font-size:0.8rem;">📂 Open files</button>
         </div>
     </header>
 
@@ -702,16 +837,46 @@
                     Placed stamps: <span id="stampTotal">0</span>
                 </div>
             </div>
+
+            <!-- EXPORT SECTION -->
+            <div class="section">
+                <h3>Export</h3>
+
+                <div class="paper-format-row">
+                    <select id="exportRangeSelect">
+                        <option value="all">Entire document (all pages)</option>
+                        <option value="current">Current page only</option>
+                        <option value="stamped">Only pages with stamps</option>
+                    </select>
+                </div>
+
+                <div class="filename-row">
+                    <label for="exportNameInput">Name</label>
+                    <input type="text" id="exportNameInput" placeholder="export" value="export">
+                    <span class="ext">.pdf</span>
+                </div>
+
+                <button class="button-full success" id="btnExportPdf" disabled>
+                    <span>⬇</span> Export PDF
+                </button>
+                <div class="export-status" id="exportStatus"></div>
+                <div class="hint" style="margin-top:8px;">
+                    Original PDF text stays vector · stamps embedded at native resolution.
+                </div>
+            </div>
         </aside>
     </div>
 </div>
 
-<div class="modal-overlay" id="folderModal">
+<!-- Folder change modal -->
+<div class="modal" id="folderModal">
     <div class="modal-content">
         <h3>Change stamp folder</h3>
-        <input type="text" id="folderInput" placeholder="e.g. ./my-stamps/" value="./stamps/">
-        <div class="hint" style="margin-bottom:12px;">Path relative to this HTML file.</div>
-        <div class="modal-actions">
+        <p>Path relative to this HTML file.</p>
+        <div class="modal-file-row">
+            <input type="text" id="folderInput" placeholder="e.g. ./my-stamps/" value="./stamps/">
+        </div>
+        <div class="modal-buttons">
             <button class="btn" id="btnCancelFolder">Cancel</button>
             <button class="btn btn-success" id="btnSaveFolder">Save</button>
         </div>
@@ -722,7 +887,7 @@
 
 <!-- PDF libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
 <script>
 (function() {
@@ -738,21 +903,13 @@
     const STAMP_ROTATIONS_KEY = 'pieceEditor_stampRotations';
     let stampRotations = JSON.parse(localStorage.getItem(STAMP_ROTATIONS_KEY) || '{}');
 
+    const PREVIEW_SCALE = 1.5;
 
     const CODE_DEFAULTS = {
-        scales: {
-            "Logo": 0.09,
-            "Signature": 0.07,
-            "Stamp": 0.10
-        },
-        rotations: {
-            "Logo": 0,
-            "Signature": 1,
-            "Stamp": 2
-        }
+        scales: { "Logo": 0.6, "Signature": 0.4, "Stamp": 0.65 },
+        rotations: { "Logo": 0, "Signature": 1, "Stamp": 3 }
     };
 
-    // Seed localStorage from CODE_DEFAULTS only if empty (first run)
     if (Object.keys(stampScales).length === 0 && Object.keys(CODE_DEFAULTS.scales).length > 0) {
         stampScales = { ...CODE_DEFAULTS.scales };
         localStorage.setItem(STAMP_SCALES_KEY, JSON.stringify(stampScales));
@@ -814,6 +971,10 @@
     const fileInput = document.getElementById('fileInput');
     const tabs = document.querySelectorAll('.tabs button');
 
+    const exportRangeSelect = document.getElementById('exportRangeSelect');
+    const exportNameInput = document.getElementById('exportNameInput');
+    const exportStatus = document.getElementById('exportStatus');
+
     // State
     let currentFile = null;
     let pdfDoc = null;
@@ -830,7 +991,7 @@
     let isDragging = false;
     let dragOffset = { x: 0, y: 0 };
     let focusedStampIdx = -1;
-    let hoverPos = null; // { x, y } while placing
+    let hoverPos = null;
 
     // ============================================================
     // INIT
@@ -842,6 +1003,7 @@
         syncSliders();
         loadStampsFromFolder();
         drawEmptyCanvas();
+        updateExportButton();
     }
 
     // ============================================================
@@ -901,7 +1063,6 @@
             }
         });
 
-        // ===== GHOST PREVIEW while placing =====
         if (moveablePickupIndex >= 0 && hoverPos) {
             const stampInfo = loadedStampImages[moveablePickupIndex];
             if (stampInfo) {
@@ -932,6 +1093,48 @@
         stampTotal.textContent = stamps.length;
     }
 
+    function countAllStamps() {
+        let n = 0;
+        for (const key in pageStamps) n += (pageStamps[key] || []).length;
+        return n;
+    }
+
+    function countStampedPages() {
+        if (!currentFile) return 0;
+        if (currentFile.type !== 'pdf') return stamps.length > 0 ? 1 : 0;
+        let n = 0;
+        for (let p = 1; p <= totalPages; p++) {
+            const key = `pdf:${currentFile.name}:${p}`;
+            if ((pageStamps[key] || []).length > 0) n++;
+        }
+        return n;
+    }
+
+    function updateExportButton() {
+        const ready = !!baseCanvas;
+        btnExportPdf.disabled = !ready;
+        // Update status with what's ready to export
+        if (!ready) {
+            exportStatus.textContent = '';
+            return;
+        }
+        const stampedPages = countStampedPages();
+        const totalStamps = countAllStamps();
+        if (totalStamps === 0) {
+            exportStatus.textContent = 'No stamps placed yet';
+        } else {
+            exportStatus.textContent = `${totalStamps} stamp${totalStamps !== 1 ? 's' : ''} on ${stampedPages} page${stampedPages !== 1 ? 's' : ''}`;
+        }
+        // Disable "stamped" option if no stamped pages
+        const stampedOpt = exportRangeSelect.querySelector('option[value="stamped"]');
+        if (stampedOpt) {
+            stampedOpt.disabled = stampedPages === 0;
+            if (stampedPages === 0 && exportRangeSelect.value === 'stamped') {
+                exportRangeSelect.value = 'all';
+            }
+        }
+    }
+
     // ============================================================
     // FILE LOADING
     // ============================================================
@@ -944,14 +1147,18 @@
     async function loadPDF(file) {
         try {
             const arrayBuffer = await file.arrayBuffer();
+            const sourceBytes = arrayBuffer.slice(0);
+
             pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             totalPages = pdfDoc.numPages;
             currentPage = 1;
-            currentFile = { type: 'pdf', name: file.name };
+            currentFile = { type: 'pdf', name: file.name, bytes: sourceBytes };
             pageStamps = {};
             await renderPDFPage(currentPage);
             pageInfo.textContent = `${file.name} · page ${currentPage}/${totalPages}`;
             updatePageButtons();
+            exportNameInput.value = file.name.replace(/\.[^.]+$/, '') + '_stamped';
+            updateExportButton();
         } catch (err) {
             console.error(err);
             alert('Failed to load PDF: ' + err.message);
@@ -973,11 +1180,12 @@
     function savePageStamps() {
         const key = getPageKey();
         pageStamps[key] = stamps;
+        updateExportButton();
     }
 
     async function renderPDFPage(pageNum) {
         const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.5 });
+        const viewport = page.getViewport({ scale: PREVIEW_SCALE });
         const offCanvas = document.createElement('canvas');
         offCanvas.width = viewport.width;
         offCanvas.height = viewport.height;
@@ -988,18 +1196,29 @@
         loadPageStamps();
         renderCurrentPage();
         updateSelectionUI();
+        updateExportButton();
     }
 
     async function loadImage(file) {
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        const url = URL.createObjectURL(file);
+        img.src = url;
         await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
         const offCanvas = document.createElement('canvas');
         offCanvas.width = img.width;
         offCanvas.height = img.height;
         offCanvas.getContext('2d').drawImage(img, 0, 0);
         baseCanvas = offCanvas;
-        currentFile = { type: 'image', name: file.name };
+
+        const imageBytes = await file.arrayBuffer();
+        currentFile = {
+            type: 'image',
+            name: file.name,
+            bytes: imageBytes,
+            mime: file.type || 'image/png'
+        };
+        URL.revokeObjectURL(url);
+
         pageStamps = {};
         totalPages = 1;
         currentPage = 1;
@@ -1009,6 +1228,8 @@
         renderCurrentPage();
         updatePageButtons();
         updateSelectionUI();
+        exportNameInput.value = file.name.replace(/\.[^.]+$/, '');
+        updateExportButton();
     }
 
     // ============================================================
@@ -1228,7 +1449,6 @@
 
         selectedStampIndex = stamps.length - 1;
 
-        // Stay in place mode
         canvas.classList.add('place-mode');
         canvasBadge.textContent = 'Placing "' + stampInfo.name + '" · Esc to stop';
 
@@ -1281,13 +1501,13 @@
         selectedStampIndex = -1;
         renderCurrentPage();
         updateSelectionUI();
+        updateExportButton();
     }
 
     // ============================================================
     // SLIDER SYNC
     // ============================================================
     function syncSliders() {
-        // Default rotation slider (per-stamp)
         defaultRotationSlider.addEventListener('input', () => {
             defaultRotationInput.value = parseFloat(defaultRotationSlider.value).toFixed(0);
             if (focusedStampIdx >= 0) {
@@ -1304,7 +1524,6 @@
             }
         });
 
-        // Default scale slider (per-stamp)
         defaultScaleSlider.addEventListener('input', () => {
             defaultScaleInput.value = parseFloat(defaultScaleSlider.value).toFixed(2);
             if (focusedStampIdx >= 0) {
@@ -1323,7 +1542,6 @@
             }
         });
 
-        // Main X / Y / scale / rotation / opacity
         xSlider.addEventListener('input', () => {
             xInput.value = xSlider.value;
             if (selectedStampIndex >= 0 && baseCanvas) {
@@ -1414,7 +1632,6 @@
             }
         });
 
-        // Static margin
         staticMarginSlider.addEventListener('input', () => {
             staticMarginInput.value = staticMarginSlider.value;
         });
@@ -1466,7 +1683,6 @@
     // EVENT BINDINGS
     // ============================================================
     function bindEvents() {
-        // Tabs
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
@@ -1488,7 +1704,6 @@
             });
         });
 
-        // Corner picker
         cornerPicker.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('click', () => {
                 cornerPicker.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -1498,7 +1713,6 @@
             });
         });
 
-        // Open files
         btnOpenFiles.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
@@ -1507,13 +1721,35 @@
             fileInput.value = '';
         });
 
-        // Export PDF
-        btnExportPdf.addEventListener('click', () => {
-            if (!baseCanvas) { alert('Nothing to export.'); return; }
-            exportPdf();
+        // ---- EXPORT ----
+        btnExportPdf.addEventListener('click', async () => {
+            if (!baseCanvas) return;
+            const range = exportRangeSelect.value;
+            let name = exportNameInput.value.trim() || 'export';
+            name = name.replace(/[\\/:*?"<>|]+/g, '_').slice(0, 100);
+
+            btnExportPdf.disabled = true;
+            const originalLabel = btnExportPdf.innerHTML;
+            btnExportPdf.innerHTML = '<span>⏳</span> Exporting…';
+            exportStatus.textContent = 'Preparing…';
+
+            try {
+                await exportPdf({ range, name });
+                exportStatus.textContent = `Exported ${name}_stamped.pdf ✓`;
+                setTimeout(() => {
+                    if (exportStatus.textContent.startsWith('Exported')) {
+                        updateExportButton();
+                    }
+                }, 3000);
+            } catch (err) {
+                console.error(err);
+                exportStatus.textContent = 'Error: ' + err.message;
+            } finally {
+                btnExportPdf.innerHTML = originalLabel;
+                btnExportPdf.disabled = false;
+            }
         });
 
-        // Pagination
         btnPrevPage.addEventListener('click', async () => {
             if (pdfDoc && currentPage > 1) {
                 currentPage--;
@@ -1531,31 +1767,26 @@
             }
         });
 
-        // Reset / delete / reset defaults
         btnReset.addEventListener('click', resetAllStamps);
         btnResetDefaults.addEventListener('click', resetDefaultsToCode);
         btnDeleteStamp.addEventListener('click', deleteSelectedStamp);
 
-        // Folder change
         btnChangeFolder.addEventListener('click', () => {
             folderInput.value = stampFolder;
-            folderModal.classList.add('open');
+            folderModal.classList.add('active');
         });
-        btnCancelFolder.addEventListener('click', () => folderModal.classList.remove('open'));
+        btnCancelFolder.addEventListener('click', () => folderModal.classList.remove('active'));
         btnSaveFolder.addEventListener('click', () => {
             const newFolder = folderInput.value.trim() || './stamps/';
             stampFolder = newFolder;
             localStorage.setItem(STAMP_FOLDER_KEY, stampFolder);
             folderLabel.textContent = stampFolder;
-            folderModal.classList.remove('open');
+            folderModal.classList.remove('active');
         });
         folderModal.addEventListener('click', (e) => {
-            if (e.target === folderModal) folderModal.classList.remove('open');
+            if (e.target === folderModal) folderModal.classList.remove('active');
         });
 
-        // ============================================================
-        // CANVAS INTERACTIONS
-        // ============================================================
         canvas.addEventListener('mousedown', (e) => {
             if (!baseCanvas) return;
             const { mx, my } = getCanvasMouse(e);
@@ -1588,7 +1819,6 @@
             if (!baseCanvas) return;
             const { mx, my } = getCanvasMouse(e);
 
-            // Track hover position for ghost preview
             if (moveablePickupIndex >= 0) {
                 hoverPos = { x: mx, y: my };
                 canvas.style.cursor = 'crosshair';
@@ -1596,7 +1826,6 @@
                 return;
             }
 
-            // Normal drag handling
             if (isDragging && selectedStampIndex >= 0 && !lockToggle.checked) {
                 const s = stamps[selectedStampIndex];
                 s.x = mx - dragOffset.x;
@@ -1638,16 +1867,12 @@
 
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // ============================================================
-        // KEYBOARD SHORTCUTS
-        // ============================================================
         document.addEventListener('keydown', (e) => {
             const tag = (e.target.tagName || '').toLowerCase();
             if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) {
                 return;
             }
 
-            // Escape → exit place mode
             if (e.key === 'Escape' && moveablePickupIndex >= 0) {
                 moveablePickupIndex = -1;
                 hoverPos = null;
@@ -1699,74 +1924,154 @@
     }
 
     // ============================================================
-    // EXPORT PDF
+    // EXPORT PDF (pdf-lib native image embedding, no rasterization)
     // ============================================================
-    async function exportPdf() {
-        if (!baseCanvas) { alert('Nothing to export.'); return; }
-        if (!window.jspdf || !window.jspdf.jsPDF) {
-            alert('jsPDF not loaded. Check internet connection.');
-            return;
+    async function exportPdf({ range = 'all', name = 'export' } = {}) {
+        if (!baseCanvas) throw new Error('Nothing to export.');
+        if (!window.PDFLib) throw new Error('pdf-lib not loaded. Check internet connection.');
+
+        const { PDFDocument, degrees } = PDFLib;
+
+        let outPdf = null;
+        const embedCache = new Map();
+
+        async function embedStamp(src, targetPdf) {
+            if (embedCache.has(src)) return embedCache.get(src);
+            const base64 = src.split(',')[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const embedded = await targetPdf.embedPng(bytes);
+            embedCache.set(src, embedded);
+            return embedded;
         }
 
-        const { jsPDF } = window.jspdf;
-        let pdf = null;
+        // ---------- PDF source ----------
+        if (currentFile.type === 'pdf') {
+            const srcPdf = await PDFDocument.load(currentFile.bytes, { ignoreEncryption: true });
+            const k = 1 / PREVIEW_SCALE;
 
-        if (pdfDoc) {
-            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-                const page = await pdfDoc.getPage(pageNum);
-                const viewport = page.getViewport({ scale: 1.5 });
-                const offCanvas = document.createElement('canvas');
-                offCanvas.width = viewport.width;
-                offCanvas.height = viewport.height;
-                const offCtx = offCanvas.getContext('2d');
-                await page.render({ canvasContext: offCtx, viewport }).promise;
-
-                const key = `pdf:${currentFile.name}:${pageNum}`;
-                const pageStampsList = pageStamps[key] || [];
-                pageStampsList.forEach(s => {
-                    const w = s.img.width * s.scale;
-                    const h = s.img.height * s.scale;
-                    const rot = (s.rotation || 0) * Math.PI / 180;
-                    offCtx.save();
-                    offCtx.translate(s.x + w / 2, s.y + h / 2);
-                    offCtx.rotate(rot);
-                    offCtx.globalAlpha = s.opacity / 100;
-                    offCtx.drawImage(s.img, -w / 2, -h / 2, w, h);
-                    offCtx.globalAlpha = 1.0;
-                    offCtx.restore();
-                });
-
-                const imgData = offCanvas.toDataURL('image/jpeg', 0.95);
-                const w = viewport.width;
-                const h = viewport.height;
-
-                if (!pdf) {
-                    pdf = new jsPDF({
-                        orientation: w > h ? 'landscape' : 'portrait',
-                        unit: 'px',
-                        format: [w, h]
-                    });
-                } else {
-                    pdf.addPage([w, h], w > h ? 'landscape' : 'portrait');
+            let pagesToProcess = [];
+            if (range === 'current') {
+                pagesToProcess = [currentPage];
+            } else if (range === 'stamped') {
+                for (let p = 1; p <= totalPages; p++) {
+                    const key = `pdf:${currentFile.name}:${p}`;
+                    if ((pageStamps[key] || []).length > 0) pagesToProcess.push(p);
                 }
-                pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+            } else {
+                pagesToProcess = Array.from({ length: totalPages }, (_, i) => i + 1);
             }
-        } else {
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const w = canvas.width;
-            const h = canvas.height;
-            pdf = new jsPDF({
-                orientation: w > h ? 'landscape' : 'portrait',
-                unit: 'px',
-                format: [w, h]
-            });
-            pdf.addImage(imgData, 'JPEG', 0, 0, w, h);
+
+            if (range === 'all') {
+                // Work in place — preserves all pages in order
+                outPdf = srcPdf;
+                const pages = outPdf.getPages();
+                for (const pageNum of pagesToProcess) {
+                    const key = `pdf:${currentFile.name}:${pageNum}`;
+                    const list = pageStamps[key] || [];
+                    if (list.length === 0) continue;
+                    const page = pages[pageNum - 1];
+                    if (!page) continue;
+                    const pageH = page.getHeight();
+
+                    for (const s of list) {
+                        const png = await embedStamp(s.img.src, outPdf);
+                        const w = s.img.width  * s.scale * k;
+                        const h = s.img.height * s.scale * k;
+                        const cx = (s.x + (s.img.width  * s.scale) / 2) * k;
+                        const cy = pageH - (s.y + (s.img.height * s.scale) / 2) * k;
+
+                        page.drawImage(png, {
+                            x: cx - w / 2,
+                            y: cy - h / 2,
+                            width: w,
+                            height: h,
+                            rotate: degrees(-(s.rotation || 0)),
+                            opacity: (s.opacity ?? 100) / 100,
+                        });
+                    }
+                }
+            } else {
+                // Subset — build a new PDF with only the selected pages
+                outPdf = await PDFDocument.create();
+                const keptIndices = pagesToProcess.map(p => p - 1);
+                const copiedPages = await outPdf.copyPages(srcPdf, keptIndices);
+                copiedPages.forEach(p => outPdf.addPage(p));
+
+                const newPages = outPdf.getPages();
+                for (let i = 0; i < pagesToProcess.length; i++) {
+                    const originalPageNum = pagesToProcess[i];
+                    const key = `pdf:${currentFile.name}:${originalPageNum}`;
+                    const list = pageStamps[key] || [];
+                    if (list.length === 0) continue;
+
+                    const page = newPages[i];
+                    const pageH = page.getHeight();
+
+                    for (const s of list) {
+                        const png = await embedStamp(s.img.src, outPdf);
+                        const w = s.img.width  * s.scale * k;
+                        const h = s.img.height * s.scale * k;
+                        const cx = (s.x + (s.img.width  * s.scale) / 2) * k;
+                        const cy = pageH - (s.y + (s.img.height * s.scale) / 2) * k;
+
+                        page.drawImage(png, {
+                            x: cx - w / 2,
+                            y: cy - h / 2,
+                            width: w,
+                            height: h,
+                            rotate: degrees(-(s.rotation || 0)),
+                            opacity: (s.opacity ?? 100) / 100,
+                        });
+                    }
+                }
+            }
+        }
+        // ---------- Image source ----------
+        else {
+            outPdf = await PDFDocument.create();
+
+            const mime = currentFile.mime || 'image/png';
+            const bgImage = mime === 'image/jpeg' || mime === 'image/jpg'
+                ? await outPdf.embedJpg(currentFile.bytes)
+                : await outPdf.embedPng(currentFile.bytes);
+
+            const pageW = bgImage.width;
+            const pageH = bgImage.height;
+            const page = outPdf.addPage([pageW, pageH]);
+            page.drawImage(bgImage, { x: 0, y: 0, width: pageW, height: pageH });
+
+            const k = pageW / canvas.width;
+
+            for (const s of stamps) {
+                const png = await embedStamp(s.img.src, outPdf);
+                const w = s.img.width  * s.scale * k;
+                const h = s.img.height * s.scale * k;
+                const cx = (s.x + (s.img.width  * s.scale) / 2) * k;
+                const cy = pageH - (s.y + (s.img.height * s.scale) / 2) * k;
+
+                page.drawImage(png, {
+                    x: cx - w / 2,
+                    y: cy - h / 2,
+                    width: w,
+                    height: h,
+                    rotate: degrees(-(s.rotation || 0)),
+                    opacity: (s.opacity ?? 100) / 100,
+                });
+            }
         }
 
-        if (pdf) {
-            const baseName = currentFile ? currentFile.name.replace(/\.[^.]+$/, '') : 'export';
-            pdf.save(baseName + '_stamped.pdf');
-        }
+        const pdfBytes = await outPdf.save({ useObjectStreams: true });
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
     // ============================================================

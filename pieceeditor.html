@@ -752,6 +752,7 @@
         let pageCropSettings = {};
 
 		let toggleSel = 1;
+		let currentFileName = '';
 		
         const paperFormats = {
             letter: { width: 612, height: 792 },
@@ -1628,7 +1629,8 @@
             pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
             isMultiImageMode = false; imageFiles = [];
             document.getElementById('pageNavigation').style.display = 'flex';
-            document.getElementById('pageStatus').style.display = 'block';
+            document.getElementById('pageStatus').style.display = 'block';]
+			currentFileName = file.name.replace(/\.[^.]+$/, '');
             await loadPDFPage(1);
         }
 
@@ -1640,6 +1642,7 @@
             pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
             document.getElementById('pageNavigation').style.display = 'flex';
             document.getElementById('pageStatus').style.display = 'block';
+			currentFileName = files[0].name.replace(/\.[^.]+$/, '');
             for (let i = 0; i < imageOnlyFiles.length; i++) {
                 pdfPages[i + 1] = await loadImageToData(imageOnlyFiles[i]);
             }
@@ -2255,7 +2258,8 @@
                         const exportCtx = exportCanvas.getContext('2d');
                         exportCtx.putImageData(out.data, 0, 0);
                         const suffix = isSplit ? `_${out.label}` : '';
-                        const filename = `page_${pageNum}${suffix}.png`;
+                        const base = currentFileName || 'page';
+						const filename = `${base}_${pageNum}${suffix}.png`;
                         const link = document.createElement('a');
                         if (quality < 1.0) {
                             link.download = filename.replace('.png', '.jpg');
@@ -2315,7 +2319,7 @@
                 const imgData = pageCanvas.toDataURL('image/jpeg', quality);
                 pdf.addImage(imgData, 'JPEG', xOffset, yOffset, scaledWidth, scaledHeight);
             }
-            pdf.save('editedpiece.pdf');
+            pdf.save(`${currentFileName}_edited.pdf`);
         }
     </script>
 </body>
