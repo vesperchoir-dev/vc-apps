@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Letter Stacker · Dark Mode</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-app: #0a0a0a; --bg-canvas: #080808; --bg-panel: #0d0d0d;
+      --bg-container: #111111; --bg-section: #1a1a1a; --bg-inset: #1f1f1f;
+      --bg-inset-hover: #2a2a2a; --bg-inset-active: #2d2d2d;
+      --bg-inset-active-hover: #3d3d3d; --bg-chip: #252525;
+      --border-subtle: #2a2a2a; --border-default: #333333; --border-strong: #444444;
+      --text-primary: #ffffff; --text-secondary: #dddddd; --text-tertiary: #cccccc;
+      --text-muted: #aaaaaa; --text-subtle: #888888; --text-faint: #666666; --text-ghost: #555555;
+      --accent: #667eea; --accent-light: #8898ff;
+      --crop: #f5a623; --crop-glow: rgba(245, 166, 35, 0.6);
+      --success: #2d5a27; --success-border: #3a6e32; --success-hover: #3a6e32;
+      --danger: #7a2d2d; --danger-border: #a04040;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-app); height: 100vh; overflow: hidden;
+      padding: 12px; display: flex; align-items: center; justify-content: center;
+    }
+    .container {
+      max-width: 1600px; width: 100%; height: calc(100vh - 24px);
+      display: flex; flex-direction: column; background: var(--bg-container);
+      border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border-subtle); overflow: hidden;
+    }
+    .header {
+      display: flex; flex-direction: row; justify-content: space-between;
+      align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .header h1 { font-size: 1.2rem; font-weight: 500; letter-spacing: -0.01em; color: var(--text-primary); }
+    .header .subtitle { font-size: 0.8rem; font-weight: 400; color: var(--text-subtle); }
+    .main-content {
+      display: flex; flex-direction: row; gap: 12px; padding: 12px;
+      height: calc(100vh - 70px); overflow: hidden; flex: 1; min-height: 0;
+    }
+    .image-section {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+      background: var(--bg-panel); border-radius: 12px; padding: 12px;
+      border: 1px solid var(--border-subtle); min-height: 0;
+    }
+    .canvas-container {
+      flex: 1; min-height: 0; background: var(--bg-canvas); border-radius: 10px;
+      border: 1px solid var(--border-subtle); display: flex;
+      align-items: center; justify-content: center; position: relative;
+      overflow: hidden; padding: 12px;
+    }
+
+    /* letter page */
+    .page-composer {
+      position: relative; background: #ffffff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6); border-radius: 2px;
+      width: 100%; height: 100%; max-width: 720px; max-height: 100%;
+      aspect-ratio: 8.5 / 11; overflow: hidden;
+      display: flex; flex-direction: column; transition: box-shadow 0.2s;
+    }
+    .page-composer.landscape { aspect-ratio: 11 / 8.5; }
+    .page-composer.a4 { aspect-ratio: 210 / 297; }
+    .page-composer.a4.landscape { aspect-ratio: 297 / 210; }
+
+    /* layer slot — flex-grow controls its share of the page */
+    .layer-slot {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      min-height: 0;
+      background: #ffffff;
+      transition: outline 0.15s, flex-grow 0.15s;
+    }
+    .layer-slot.selected {
+      outline: 2px solid var(--crop);
+      outline-offset: -2px;
+      z-index: 10;
+    }
+    .layer-slot:hover:not(.selected) {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    /* the actual image — sized by zoom, positioned by offset */
+    .layer-img {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform-origin: center center;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      will-change: transform;
+      max-width: none;
+      max-height: none;
+    }
+
+    /* divider line between slots (for clarity) */
+    .slot-divider {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: rgba(0,0,0,0.08);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .drag-hint {
+      position: absolute;
+      bottom: 6px; right: 6px;
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 3;
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .layer-slot.selected .drag-hint { opacity: 1; }
+
+    .layer-index {
+      position: absolute;
+      top: 6px; left: 6px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid var(--border-default);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 3;
+      backdrop-filter: blur(2px);
+    }
+    .layer-slot.selected .layer-index {
+      background: var(--crop);
+      color: #111;
+      border-color: #fff;
+      font-weight: 600;
+    }
+
+    .empty-layer {
+      flex: 1; width: 100%; background: #1a1a1a; border: 1px dashed var(--border-strong);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-ghost); font-size: 0.65rem; font-style: italic; min-height: 0;
+    }
+
+    .upload-btn {
+      display: flex; gap: 6px; justify-content: center;
+      margin-top: 12px; align-items: center; flex-wrap: wrap;
+    }
+    .tools-panel {
+      width: 340px; flex-shrink: 0; display: flex; flex-direction: column;
+      background: var(--bg-panel); border-radius: 12px; padding: 16px;
+      border: 1px solid var(--border-subtle); overflow-y: auto; min-height: 0;
+    }
+    .tools-panel::-webkit-scrollbar { width: 4px; }
+    .tools-panel::-webkit-scrollbar-track { background: var(--bg-section); }
+    .tools-panel::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+    .section {
+      background: var(--bg-section); border: 1px solid var(--border-subtle);
+      border-radius: 10px; padding: 14px; margin-bottom: 16px;
+    }
+    .section:last-child { margin-bottom: 0; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; }
+    .section h3 {
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--text-subtle); margin-bottom: 12px;
+    }
+    .section-header h3 { margin-bottom: 0; }
+
+    .btn {
+      background: var(--bg-inset); color: var(--text-secondary);
+      border: 1px solid var(--border-default); padding: 8px; border-radius: 8px;
+      font-size: 0.7rem; font-weight: 400; transition: 0.2s; cursor: pointer;
+      font-family: inherit; display: inline-flex; align-items: center;
+      justify-content: center; gap: 4px;
+    }
+    .btn:hover {
+      background: var(--bg-inset-hover); border-color: var(--border-strong); color: var(--text-primary);
+    }
+    .btn.active {
+      background: var(--accent); border-color: var(--accent-light); color: #fff;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:disabled:hover { background: var(--bg-inset); border-color: var(--border-default); color: var(--text-secondary); }
+    .btn-secondary { background: var(--bg-section); }
+    .btn-danger { background: var(--danger); border-color: var(--danger-border); color: #fff; }
+    .btn-danger:hover { background: var(--danger-border); }
+
+    .button-full {
+      width: 100%; background: var(--accent); color: white;
+      border: 1px solid var(--accent-light); padding: 12px; border-radius: 10px;
+      font-size: 0.85rem; font-weight: 500; margin: 4px 0;
+      transition: all 0.2s; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .button-full:hover {
+      background: var(--accent-light); transform: translateY(-1px);
+      box-shadow: 0 8px 20px -8px var(--accent);
+    }
+    .button-full:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .button-full:disabled:hover { background: var(--accent); transform: none; box-shadow: none; }
+    .button-full.success { background: var(--success); border-color: var(--success-border); }
+    .button-full.success:hover { background: var(--success-hover); box-shadow: 0 8px 20px -8px var(--success); }
+
+    .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+    .action-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+
+    .direction-toggle {
+      display: flex; background: var(--bg-panel); border: 1px solid var(--border-default);
+      border-radius: 8px; overflow: hidden; margin-bottom: 12px;
+    }
+    .direction-toggle button {
+      flex: 1; background: transparent; color: var(--text-muted); border: none;
+      padding: 6px 8px; font-size: 0.7rem; cursor: pointer;
+      transition: 0.15s; font-family: inherit;
+    }
+    .direction-toggle button.active { background: var(--accent); color: #fff; }
+    .direction-toggle button:hover:not(.active) { background: #222; color: #fff; }
+
+    .info-text { color: var(--text-faint); font-size: 0.65rem; margin-top: 4px; font-style: italic; }
+    .paper-format-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .paper-format-row select {
+      flex: 1; background: var(--bg-inset); color: var(--text-primary);
+      border: 1px solid var(--border-default); padding: 6px; border-radius: 6px;
+      font-size: 0.75rem; font-family: inherit;
+    }
+
+    .layer-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .layer-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; background: var(--bg-inset);
+      border: 1px solid var(--border-default); border-radius: 8px;
+      font-size: 0.7rem; color: var(--text-muted);
+      cursor: pointer; transition: 0.15s;
+    }
+    .layer-item:hover { background: var(--bg-inset-hover); border-color: var(--border-strong); color: var(--text-primary); }
+    .layer-item.selected {
+      background: rgba(245, 166, 35, 0.15);
+      border-color: var(--crop);
+      color: #fff;
+    }
+    .layer-thumb {
+      width: 28px; height: 28px; border-radius: 4px; object-fit: cover;
+      border: 1px solid var(--border-default); background: #000; flex-shrink: 0;
+    }
+    .layer-item .layer-name {
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-size: 0.65rem;
+    }
+    .layer-item .layer-num {
+      font-weight: 600; color: var(--text-subtle); font-size: 0.65rem;
+      min-width: 16px; text-align: center;
+    }
+    .layer-item.selected .layer-num { color: var(--crop); }
+
+    .slider-group { margin-bottom: 10px; }
+    .slider-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+    }
+    .slider-header label { font-size: 0.7rem; color: var(--text-tertiary); }
+    .value-display {
+      font-size: 0.65rem; color: var(--text-muted);
+      background: var(--bg-chip); padding: 2px 8px;
+      border-radius: 12px; border: 1px solid var(--border-default);
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"].slider {
+      width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+      background: var(--border-subtle); border-radius: 4px; outline: none;
+    }
+    input[type="range"].slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); border: 2px solid var(--accent-light);
+      cursor: pointer; transition: 0.1s;
+    }
+    input[type="range"].slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15); background: var(--accent-light);
+    }
+    input[type="range"].slider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); border: 2px solid var(--accent-light);
+      cursor: pointer;
+    }
+
+    .preview-chip {
+      display: flex; align-items: center; gap: 8px; margin-top: 8px;
+      padding: 6px 10px; background: var(--bg-inset); border: 1px solid var(--border-default);
+      border-radius: 20px; font-size: 0.7rem; color: var(--text-muted);
+    }
+    .preview-indicator { width: 10px; height: 10px; border-radius: 2px; background: var(--accent); }
+    .letter-badge {
+      display: inline-block; background: rgba(102, 126, 234, 0.2);
+      border: 1px solid var(--accent); border-radius: 20px; padding: 2px 10px;
+      font-size: 0.7rem; color: var(--accent-light); font-weight: 500;
+    }
+    .image-count { color: var(--accent); font-weight: 600; font-size: 0.9rem; }
+    #fileInput { display: none; }
+
+    .modal {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background-color: rgba(0,0,0,0.8); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: var(--bg-section); padding: 20px; border: 1px solid var(--border-default);
+      border-radius: 16px; width: 340px; max-width: 90vw;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
+    }
+    .modal-content h3 { font-size: 0.9rem; color: #fff; margin-bottom: 8px; font-weight: 500; }
+    .modal-content p { font-size: 0.8rem; color: #aaa; margin-bottom: 12px; line-height: 1.5; }
+    .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .modal-buttons .btn { padding: 8px 16px; }
+    .export-status { font-size: 0.7rem; color: var(--accent-light); text-align: center; margin-top: 8px; min-height: 16px; }
+
+    .layer-actions { display: flex; gap: 2px; }
+    .layer-actions button {
+      background: transparent; border: 1px solid var(--border-default);
+      color: var(--text-muted); width: 18px; height: 18px; border-radius: 4px;
+      font-size: 0.6rem; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; padding: 0;
+      transition: 0.15s;
+    }
+    .layer-actions button:hover:not(:disabled) { background: var(--bg-inset-hover); color: #fff; border-color: var(--border-strong); }
+    .layer-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* weight badge */
+    .weight-badge {
+      font-size: 0.6rem; color: var(--text-faint);
+      font-variant-numeric: tabular-nums;
+      min-width: 34px; text-align: right;
+    }
+    .layer-item.selected .weight-badge { color: var(--crop); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Letter Stacker</h1>
+        <div class="subtitle">Crop, reposition & combine 2–4 images into a letter-sized page</div>
+      </div>
+      <div class="letter-badge" id="paperBadge">US Letter · 8.5 × 11 in</div>
+    </div>
+
+    <div class="main-content">
+      <div class="image-section">
+        <div class="canvas-container">
+          <div class="page-composer" id="pageComposer"></div>
+        </div>
+
+        <div class="upload-btn">
+          <button class="btn" id="uploadBtn" style="padding: 10px 20px; font-size:0.8rem;">
+            <span>📁</span> Choose images (2–4)
+          </button>
+          <input type="file" id="fileInput" accept="image/*" multiple>
+          <button class="btn btn-secondary" id="clearBtn" style="padding: 10px 16px;">Clear</button>
+        </div>
+      </div>
+
+      <div class="tools-panel">
+        <!-- LAYER LIST -->
+        <div class="section">
+          <div class="section-header">
+            <h3>Layers</h3>
+            <span class="image-count" id="layerCount">0</span>
+          </div>
+          <div class="info-text" style="margin-top:0; margin-bottom:8px;">
+            Click a layer, then drag it in the preview.
+          </div>
+          <div class="layer-list" id="layerList"></div>
+          <div class="action-mini" style="margin-top:10px;">
+            <button class="btn" id="addImageBtn">＋ Add</button>
+            <button class="btn" id="removeLastBtn">－ Remove last</button>
+          </div>
+        </div>
+
+        <!-- SELECTED LAYER CONTROLS -->
+        <div class="section" id="adjustSection">
+          <h3>Adjust layer <span id="adjustLayerNum" style="color:var(--crop);">—</span></h3>
+
+          <div id="noSelectionMsg" class="info-text" style="margin:0 0 8px 0;">
+            Select a layer above to adjust its crop, position and size.
+          </div>
+
+          <div id="adjustControls" style="display:none;">
+            <!-- Vertical weight (share of page height) -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label>Vertical weight</label>
+                <span class="value-display" id="weightVal">1.00</span>
+              </div>
+              <input type="range" class="slider" id="weightSlider" min="10" max="400" value="100" step="5">
+              <div class="info-text" style="margin-top:4px;">Higher = taller slot. Neighbors shrink automatically.</div>
+            </div>
+
+            <!-- Zoom (out to 10%) -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label>Zoom</label>
+                <span class="value-display" id="zoomVal">100%</span>
+              </div>
+              <input type="range" class="slider" id="zoomSlider" min="10" max="300" value="100" step="5">
+              <div class="info-text" style="margin-top:4px;">Below 100% reveals white paper around the image.</div>
+            </div>
+
+            <!-- Vertical offset -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label>Vertical offset</label>
+                <span class="value-display" id="offsetVal">0%</span>
+              </div>
+              <input type="range" class="slider" id="offsetSlider" min="-100" max="100" value="0" step="1">
+            </div>
+
+            <!-- Horizontal offset -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label>Horizontal offset</label>
+                <span class="value-display" id="hOffsetVal">0%</span>
+              </div>
+              <input type="range" class="slider" id="hOffsetSlider" min="-100" max="100" value="0" step="1">
+            </div>
+
+            <!-- Fit mode -->
+            <div class="slider-group">
+              <div class="slider-header">
+                <label>Fit mode</label>
+              </div>
+              <div class="direction-toggle" style="margin-bottom:0;">
+                <button data-fit="cover" class="active">Cover</button>
+                <button data-fit="contain">Contain</button>
+              </div>
+            </div>
+
+            <div class="action-mini" style="margin-top:10px;">
+              <button class="btn" id="resetLayerBtn">↺ Reset layer</button>
+              <button class="btn btn-danger" id="deleteLayerBtn">✕ Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RATIO PRESETS -->
+        <div class="section">
+          <h3>Split presets</h3>
+          <div class="button-grid">
+            <button class="btn" data-preset="equal">Equal</button>
+            <button class="btn" data-preset="top-heavy">Top heavy</button>
+          </div>
+          <div class="button-grid">
+            <button class="btn" data-preset="bottom-heavy">Bottom heavy</button>
+            <button class="btn" data-preset="center-focus">Center focus</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Paper & layout</h3>
+          <div class="paper-format-row">
+            <select id="paperFormatSelect">
+              <option value="letter">Letter (8.5 × 11 in)</option>
+              <option value="a4">A4 (210 × 297 mm)</option>
+            </select>
+          </div>
+          <div class="direction-toggle" id="directionToggle">
+            <button class="active" data-dir="portrait">Portrait</button>
+            <button data-dir="landscape">Landscape</button>
+          </div>
+        </div>
+
+        <!-- EXPORT -->
+        <div class="section">
+          <h3>Export</h3>
+          <div class="paper-format-row">
+            <select id="exportFormatSelect">
+              <option value="png">PNG (lossless)</option>
+              <option value="jpeg">JPEG (smaller)</option>
+              <option value="webp">WebP</option>
+            </select>
+            <select id="exportQualitySelect" style="max-width: 90px;">
+              <option value="0.8">80%</option>
+              <option value="0.9" selected>90%</option>
+              <option value="0.95">95%</option>
+              <option value="1">100%</option>
+            </select>
+          </div>
+          <button class="button-full success" id="exportBtn" disabled>
+            <span>⬇</span> Export letter page
+          </button>
+          <div class="export-status" id="exportStatus"></div>
+          <div class="info-text" style="margin-top:8px;">Exports at 300 DPI.</div>
+        </div>
+
+        <div class="preview-chip">
+          <span class="preview-indicator"></span>
+          <span>Page preview · <span id="previewFormat">letter</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="exportModal">
+    <div class="modal-content">
+      <h3>Export page</h3>
+      <p id="exportModalText">Ready to export your letter page?</p>
+      <div class="modal-buttons">
+        <button class="btn" id="cancelExportBtn">Cancel</button>
+        <button class="btn" id="confirmExportBtn" style="background:var(--accent);border-color:var(--accent-light);color:#fff;">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Each image: { src, name, weight, offsetY, offsetX, zoom, fitMode }
+      // weight: flex-grow value (relative share of page height). Default 1.
+      // zoom: 10-300 (%). Below 100 => image smaller than slot, white shows through.
+      // fitMode: 'cover' | 'contain' — determines base sizing before zoom.
+      // offsetX/offsetY: -100..100 % of slot dims
+      let images = [];
+      let selectedIndex = -1;
+      const maxImages = 4;
+
+      const pageComposer = document.getElementById('pageComposer');
+      const fileInput = document.getElementById('fileInput');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const layerCountSpan = document.getElementById('layerCount');
+      const layerList = document.getElementById('layerList');
+      const addImageBtn = document.getElementById('addImageBtn');
+      const removeLastBtn = document.getElementById('removeLastBtn');
+      const directionToggle = document.getElementById('directionToggle');
+      const paperFormatSelect = document.getElementById('paperFormatSelect');
+      const paperBadge = document.getElementById('paperBadge');
+      const previewFormat = document.getElementById('previewFormat');
+      const exportBtn = document.getElementById('exportBtn');
+      const exportStatus = document.getElementById('exportStatus');
+      const exportFormatSelect = document.getElementById('exportFormatSelect');
+      const exportQualitySelect = document.getElementById('exportQualitySelect');
+      const exportModal = document.getElementById('exportModal');
+      const exportModalText = document.getElementById('exportModalText');
+      const cancelExportBtn = document.getElementById('cancelExportBtn');
+      const confirmExportBtn = document.getElementById('confirmExportBtn');
+
+      const noSelectionMsg = document.getElementById('noSelectionMsg');
+      const adjustControls = document.getElementById('adjustControls');
+      const adjustLayerNum = document.getElementById('adjustLayerNum');
+      const weightSlider = document.getElementById('weightSlider');
+      const weightVal = document.getElementById('weightVal');
+      const zoomSlider = document.getElementById('zoomSlider');
+      const zoomVal = document.getElementById('zoomVal');
+      const offsetSlider = document.getElementById('offsetSlider');
+      const offsetVal = document.getElementById('offsetVal');
+      const hOffsetSlider = document.getElementById('hOffsetSlider');
+      const hOffsetVal = document.getElementById('hOffsetVal');
+      const resetLayerBtn = document.getElementById('resetLayerBtn');
+      const deleteLayerBtn = document.getElementById('deleteLayerBtn');
+
+      let currentOrientation = 'portrait';
+      let currentFormat = 'letter';
+
+      // ----- NATURAL IMAGE DIMENSIONS CACHE -----
+      // We need to know the image's natural aspect to compute cover/contain base size.
+      const naturalSizes = new Map();
+
+      function cacheNaturalSize(src) {
+        if (naturalSizes.has(src)) return Promise.resolve(naturalSizes.get(src));
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const size = { w: img.naturalWidth, h: img.naturalHeight };
+            naturalSizes.set(src, size);
+            resolve(size);
+          };
+          img.onerror = () => resolve({ w: 1, h: 1 });
+          img.src = src;
+        });
+      }
+
+      // ----- RENDER PREVIEW -----
+      function renderPage() {
+        pageComposer.innerHTML = '';
+        const count = images.length;
+        layerCountSpan.textContent = count;
+        exportBtn.disabled = count === 0;
+
+        if (count === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'empty-layer';
+          emptyDiv.textContent = 'No images — click "Choose images"';
+          pageComposer.appendChild(emptyDiv);
+          renderLayerList();
+          updateAdjustPanel();
+          return;
+        }
+
+        images.forEach((img, index) => {
+          const slot = document.createElement('div');
+          slot.className = 'layer-slot' + (index === selectedIndex ? ' selected' : '');
+          slot.dataset.index = index;
+
+          // flex weight controls vertical share
+          slot.style.flexGrow = img.weight || 1;
+          slot.style.flexBasis = '0';
+          slot.style.flexShrink = '0';
+
+          // the image
+          const imgEl = document.createElement('img');
+          imgEl.className = 'layer-img';
+          imgEl.src = img.src;
+          imgEl.alt = img.name || `layer ${index + 1}`;
+          imgEl.draggable = false;
+
+          // we need to size the image based on slot dims + zoom + fitMode
+          // since slot dims aren't known until layout, use a resize observer
+          slot.appendChild(imgEl);
+
+          // divider line
+          const div = document.createElement('div');
+          div.className = 'slot-divider';
+          slot.appendChild(div);
+
+          const badge = document.createElement('div');
+          badge.className = 'layer-index';
+          badge.textContent = '#' + (index + 1);
+          slot.appendChild(badge);
+
+          const hint = document.createElement('div');
+          hint.className = 'drag-hint';
+          hint.textContent = 'drag to move';
+          slot.appendChild(hint);
+
+          // click to select
+          slot.addEventListener('click', () => {
+            selectedIndex = index;
+            renderPage();
+            renderLayerList();
+            updateAdjustPanel();
+          });
+
+          // drag to reposition
+          let isDragging = false;
+          let startX = 0, startY = 0;
+          let startOffX = 0, startOffY = 0;
+          let slotRect = null;
+
+          slot.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            if (selectedIndex !== index) {
+              selectedIndex = index;
+              renderPage();
+              renderLayerList();
+              updateAdjustPanel();
+              return;
+            }
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startOffX = images[index].offsetX || 0;
+            startOffY = images[index].offsetY || 0;
+            slotRect = slot.getBoundingClientRect();
+            e.preventDefault();
+            document.body.style.cursor = 'grabbing';
+          });
+
+          window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const pctX = (dx / slotRect.width) * 100;
+            const pctY = (dy / slotRect.height) * 100;
+            let newOffX = Math.round(startOffX + pctX);
+            let newOffY = Math.round(startOffY + pctY);
+            newOffX = Math.max(-100, Math.min(100, newOffX));
+            newOffY = Math.max(-100, Math.min(100, newOffY));
+            images[index].offsetX = newOffX;
+            images[index].offsetY = newOffY;
+
+            positionImageInSlot(imgEl, slot, images[index]);
+
+            if (selectedIndex === index) {
+              offsetSlider.value = newOffY;
+              offsetVal.textContent = newOffY + '%';
+              hOffsetSlider.value = newOffX;
+              hOffsetVal.textContent = newOffX + '%';
+            }
+          });
+
+          window.addEventListener('mouseup', () => {
+            if (isDragging) {
+              isDragging = false;
+              document.body.style.cursor = '';
+            }
+          });
+
+          pageComposer.appendChild(slot);
+        });
+
+        // After layout, position all images based on their slot sizes
+        requestAnimationFrame(() => {
+          const slots = pageComposer.querySelectorAll('.layer-slot');
+          slots.forEach((slot, i) => {
+            const imgEl = slot.querySelector('.layer-img');
+            if (imgEl && images[i]) {
+              positionImageInSlot(imgEl, slot, images[i]);
+            }
+          });
+        });
+
+        renderLayerList();
+        updateAdjustPanel();
+      }
+
+      // ----- SIZE & POSITION IMAGE WITHIN SLOT -----
+      // Applies fitMode + zoom + offset.
+      // The image is absolutely positioned, centered at 50%/50%, and given
+      // explicit pixel width/height based on slot dims so that white paper
+      // shows through when zoomed out or fit=contain.
+      function positionImageInSlot(imgEl, slot, data) {
+        const slotW = slot.clientWidth;
+        const slotH = slot.clientHeight;
+        if (slotW === 0 || slotH === 0) return;
+
+        const natural = naturalSizes.get(data.src);
+        if (!natural) {
+          // Not cached yet — load and retry
+          cacheNaturalSize(data.src).then(() => {
+            positionImageInSlot(imgEl, slot, data);
+          });
+          return;
+        }
+
+        const imgAspect = natural.w / natural.h;
+        const slotAspect = slotW / slotH;
+
+        let baseW, baseH;
+        if (data.fitMode === 'contain') {
+          // fit entirely inside slot
+          if (imgAspect > slotAspect) {
+            baseW = slotW;
+            baseH = slotW / imgAspect;
+          } else {
+            baseH = slotH;
+            baseW = slotH * imgAspect;
+          }
+        } else {
+          // cover — fill slot, may overflow
+          if (imgAspect > slotAspect) {
+            baseH = slotH;
+            baseW = slotH * imgAspect;
+          } else {
+            baseW = slotW;
+            baseH = slotW / imgAspect;
+          }
+        }
+
+        const zoom = (data.zoom || 100) / 100;
+        const finalW = baseW * zoom;
+        const finalH = baseH * zoom;
+
+        // offset in pixels
+        const offX = ((data.offsetX || 0) / 100) * slotW;
+        const offY = ((data.offsetY || 0) / 100) * slotH;
+
+        // Center at 50%/50% then apply offset
+        imgEl.style.width = finalW + 'px';
+        imgEl.style.height = finalH + 'px';
+        imgEl.style.left = '50%';
+        imgEl.style.top = '50%';
+        imgEl.style.transform = `translate(-50%, -50%) translate(${offX}px, ${offY}px)`;
+      }
+
+      // ----- RENDER LAYER LIST -----
+      function renderLayerList() {
+        layerList.innerHTML = '';
+        if (images.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'info-text';
+          empty.style.textAlign = 'center';
+          empty.style.padding = '8px 0';
+          empty.textContent = 'No layers yet';
+          layerList.appendChild(empty);
+          return;
+        }
+
+        images.forEach((img, index) => {
+          const item = document.createElement('div');
+          item.className = 'layer-item' + (index === selectedIndex ? ' selected' : '');
+          item.dataset.index = index;
+
+          const thumb = document.createElement('img');
+          thumb.className = 'layer-thumb';
+          thumb.src = img.src;
+          thumb.alt = '';
+          item.appendChild(thumb);
+
+          const num = document.createElement('span');
+          num.className = 'layer-num';
+          num.textContent = (index + 1);
+          item.appendChild(num);
+
+          const name = document.createElement('span');
+          name.className = 'layer-name';
+          name.textContent = img.name || 'layer ' + (index + 1);
+          item.appendChild(name);
+
+          const weight = document.createElement('span');
+          weight.className = 'weight-badge';
+          weight.textContent = (img.weight || 1).toFixed(2);
+          item.appendChild(weight);
+
+          const actions = document.createElement('div');
+          actions.className = 'layer-actions';
+
+          const upBtn = document.createElement('button');
+          upBtn.textContent = '▲';
+          upBtn.title = 'Move up';
+          upBtn.disabled = index === 0;
+          upBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (index > 0) {
+              [images[index - 1], images[index]] = [images[index], images[index - 1]];
+              if (selectedIndex === index) selectedIndex = index - 1;
+              else if (selectedIndex === index - 1) selectedIndex = index;
+              renderPage();
+            }
+          });
+          actions.appendChild(upBtn);
+
+          const downBtn = document.createElement('button');
+          downBtn.textContent = '▼';
+          downBtn.title = 'Move down';
+          downBtn.disabled = index === images.length - 1;
+          downBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (index < images.length - 1) {
+              [images[index + 1], images[index]] = [images[index], images[index + 1]];
+              if (selectedIndex === index) selectedIndex = index + 1;
+              else if (selectedIndex === index + 1) selectedIndex = index;
+              renderPage();
+            }
+          });
+          actions.appendChild(downBtn);
+
+          item.appendChild(actions);
+
+          item.addEventListener('click', () => {
+            selectedIndex = index;
+            renderPage();
+            renderLayerList();
+            updateAdjustPanel();
+          });
+
+          layerList.appendChild(item);
+        });
+      }
+
+      // ----- UPDATE ADJUST PANEL -----
+      function updateAdjustPanel() {
+        if (selectedIndex < 0 || selectedIndex >= images.length) {
+          noSelectionMsg.style.display = 'block';
+          adjustControls.style.display = 'none';
+          adjustLayerNum.textContent = '—';
+          return;
+        }
+
+        noSelectionMsg.style.display = 'none';
+        adjustControls.style.display = 'block';
+        adjustLayerNum.textContent = '#' + (selectedIndex + 1);
+
+        const img = images[selectedIndex];
+        weightSlider.value = Math.round((img.weight || 1) * 100);
+        weightVal.textContent = (img.weight || 1).toFixed(2);
+        zoomSlider.value = img.zoom || 100;
+        zoomVal.textContent = (img.zoom || 100) + '%';
+        offsetSlider.value = img.offsetY || 0;
+        offsetVal.textContent = (img.offsetY || 0) + '%';
+        hOffsetSlider.value = img.offsetX || 0;
+        hOffsetVal.textContent = (img.offsetX || 0) + '%';
+
+        // fit mode buttons
+        const fitBtns = adjustControls.querySelectorAll('[data-fit]');
+        fitBtns.forEach(b => {
+          b.classList.toggle('active', b.dataset.fit === (img.fitMode || 'cover'));
+        });
+      }
+
+      // ----- UPDATE SELECTED LAYER PROP -----
+      function updateSelectedLayer(prop, value) {
+        if (selectedIndex < 0 || selectedIndex >= images.length) return;
+        images[selectedIndex][prop] = value;
+
+        const slots = pageComposer.querySelectorAll('.layer-slot');
+        const slot = slots[selectedIndex];
+        if (!slot) return;
+        const imgEl = slot.querySelector('.layer-img');
+
+        if (prop === 'weight') {
+          slot.style.flexGrow = value;
+          weightVal.textContent = value.toFixed(2);
+          // reposition all images because slot sizes changed
+          requestAnimationFrame(() => {
+            const allSlots = pageComposer.querySelectorAll('.layer-slot');
+            allSlots.forEach((s, i) => {
+              const ie = s.querySelector('.layer-img');
+              if (ie && images[i]) positionImageInSlot(ie, s, images[i]);
+            });
+          });
+          renderLayerList();
+          return;
+        }
+
+        if (imgEl) {
+          positionImageInSlot(imgEl, slot, images[selectedIndex]);
+        }
+
+        if (prop === 'zoom') zoomVal.textContent = value + '%';
+        if (prop === 'offsetY') offsetVal.textContent = value + '%';
+        if (prop === 'offsetX') hOffsetVal.textContent = value + '%';
+      }
+
+      // ----- ADD / REMOVE -----
+      function addImages(files) {
+        const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
+        if (!fileList.length) return;
+
+        const available = maxImages - images.length;
+        if (available <= 0) {
+          alert(`Maximum ${maxImages} images allowed. Remove some layers first.`);
+          return;
+        }
+
+        const toAdd = fileList.slice(0, available);
+        let loaded = 0;
+        toAdd.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const src = e.target.result;
+            cacheNaturalSize(src);
+            images.push({
+              src: src,
+              name: file.name,
+              weight: 1,
+              offsetY: 0,
+              offsetX: 0,
+              zoom: 100,
+              fitMode: 'cover'
+            });
+            loaded++;
+            if (loaded === toAdd.length) {
+              if (selectedIndex < 0) selectedIndex = 0;
+              renderPage();
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+
+        if (toAdd.length < fileList.length) {
+          setTimeout(() => alert(`Only ${toAdd.length} image(s) added. Maximum is ${maxImages}.`), 100);
+        }
+      }
+
+      function removeLastImage() {
+        if (images.length === 0) return;
+        images.pop();
+        if (selectedIndex >= images.length) selectedIndex = images.length - 1;
+        renderPage();
+      }
+
+      function clearAll() {
+        if (images.length === 0) return;
+        if (confirm('Clear all images?')) {
+          images = [];
+          selectedIndex = -1;
+          renderPage();
+        }
+      }
+
+      // ----- PRESETS -----
+      function applyPreset(name) {
+        if (images.length === 0) return;
+        const n = images.length;
+        if (name === 'equal') {
+          images.forEach(i => i.weight = 1);
+        } else if (name === 'top-heavy') {
+          // first image gets more
+          images.forEach((img, i) => img.weight = (n - i));
+        } else if (name === 'bottom-heavy') {
+          images.forEach((img, i) => img.weight = (i + 1));
+        } else if (name === 'center-focus') {
+          // middle gets more
+          const mid = (n - 1) / 2;
+          images.forEach((img, i) => img.weight = 1 + Math.max(0, 1.5 - Math.abs(i - mid)));
+        }
+        renderPage();
+      }
+
+      // ----- PAPER STYLE -----
+      function updatePaperStyle() {
+        pageComposer.classList.remove('landscape', 'a4');
+        if (currentFormat === 'a4') pageComposer.classList.add('a4');
+        if (currentOrientation === 'landscape') pageComposer.classList.add('landscape');
+
+        const label = currentFormat === 'letter'
+          ? (currentOrientation === 'portrait' ? 'US Letter · 8.5 × 11 in' : 'US Letter · 11 × 8.5 in')
+          : (currentOrientation === 'portrait' ? 'A4 · 210 × 297 mm' : 'A4 · 297 × 210 mm');
+        paperBadge.textContent = label;
+        previewFormat.textContent = currentFormat + (currentOrientation === 'landscape' ? ' landscape' : '');
+
+        // reposition images after aspect change
+        requestAnimationFrame(() => {
+          const slots = pageComposer.querySelectorAll('.layer-slot');
+          slots.forEach((s, i) => {
+            const ie = s.querySelector('.layer-img');
+            if (ie && images[i]) positionImageInSlot(ie, s, images[i]);
+          });
+        });
+      }
+
+      // ----- EXPORT -----
+      function getExportDimensions() {
+        if (currentFormat === 'letter') {
+          return currentOrientation === 'portrait'
+            ? { width: 2550, height: 3300 }
+            : { width: 3300, height: 2550 };
+        } else {
+          return currentOrientation === 'portrait'
+            ? { width: 2480, height: 3508 }
+            : { width: 3508, height: 2480 };
+        }
+      }
+
+      function loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      }
+
+      async function exportPage() {
+        if (images.length === 0) return;
+
+        const { width, height } = getExportDimensions();
+        const format = exportFormatSelect.value;
+        const quality = parseFloat(exportQualitySelect.value);
+
+        exportBtn.disabled = true;
+        exportStatus.textContent = 'Preparing images...';
+
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          // White paper background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, width, height);
+
+          exportStatus.textContent = 'Loading images...';
+          const loadedImages = await Promise.all(images.map(img => loadImage(img.src)));
+
+          // Compute slot heights from weights
+          const totalWeight = images.reduce((s, i) => s + (i.weight || 1), 0);
+          const slotHeights = images.map(i => ((i.weight || 1) / totalWeight) * height);
+
+          let cursorY = 0;
+          loadedImages.forEach((img, i) => {
+            const data = images[i];
+            const slotH = slotHeights[i];
+            const slotW = width;
+            const slotY = cursorY;
+
+            const naturalW = img.naturalWidth;
+            const naturalH = img.naturalHeight;
+            const imgAspect = naturalW / naturalH;
+            const slotAspect = slotW / slotH;
+
+            let baseW, baseH;
+            if (data.fitMode === 'contain') {
+              if (imgAspect > slotAspect) {
+                baseW = slotW;
+                baseH = slotW / imgAspect;
+              } else {
+                baseH = slotH;
+                baseW = slotH * imgAspect;
+              }
+            } else {
+              if (imgAspect > slotAspect) {
+                baseH = slotH;
+                baseW = slotH * imgAspect;
+              } else {
+                baseW = slotW;
+                baseH = slotW / imgAspect;
+              }
+            }
+
+            const zoom = (data.zoom || 100) / 100;
+            const finalW = baseW * zoom;
+            const finalH = baseH * zoom;
+
+            const offX = ((data.offsetX || 0) / 100) * slotW;
+            const offY = ((data.offsetY || 0) / 100) * slotH;
+
+            const drawX = slotW / 2 - finalW / 2 + offX;
+            const drawY = slotY + slotH / 2 - finalH / 2 + offY;
+
+            // Clip to slot so image can't bleed into neighbor
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, slotY, slotW, slotH);
+            ctx.clip();
+            ctx.drawImage(img, drawX, drawY, finalW, finalH);
+            ctx.restore();
+
+            cursorY += slotH;
+          });
+
+          exportStatus.textContent = 'Encoding...';
+
+          const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+          const ext = format === 'jpeg' ? 'jpg' : format;
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              exportStatus.textContent = 'Export failed.';
+              exportBtn.disabled = false;
+              return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            a.download = `letter-stack-${timestamp}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            exportStatus.textContent = `Exported ${width}×${height} ${format.toUpperCase()}`;
+            exportBtn.disabled = false;
+            setTimeout(() => { if (exportStatus.textContent.startsWith('Exported')) exportStatus.textContent = ''; }, 4000);
+          }, mimeType, quality);
+
+        } catch (err) {
+          console.error(err);
+          exportStatus.textContent = 'Error: ' + err.message;
+          exportBtn.disabled = false;
+        }
+      }
+
+      // ----- EVENT LISTENERS -----
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          addImages(e.target.files);
+          fileInput.value = '';
+        }
+      });
+
+      clearBtn.addEventListener('click', clearAll);
+      addImageBtn.addEventListener('click', () => {
+        if (images.length >= maxImages) { alert(`Maximum ${maxImages} images.`); return; }
+        fileInput.click();
+      });
+      removeLastBtn.addEventListener('click', removeLastImage);
+
+      weightSlider.addEventListener('input', (e) => {
+        updateSelectedLayer('weight', parseInt(e.target.value) / 100);
+      });
+      zoomSlider.addEventListener('input', (e) => {
+        updateSelectedLayer('zoom', parseInt(e.target.value));
+      });
+      offsetSlider.addEventListener('input', (e) => {
+        updateSelectedLayer('offsetY', parseInt(e.target.value));
+      });
+      hOffsetSlider.addEventListener('input', (e) => {
+        updateSelectedLayer('offsetX', parseInt(e.target.value));
+      });
+
+      // fit mode buttons
+      adjustControls.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-fit]');
+        if (!btn) return;
+        if (selectedIndex < 0 || selectedIndex >= images.length) return;
+        images[selectedIndex].fitMode = btn.dataset.fit;
+        const slots = pageComposer.querySelectorAll('.layer-slot');
+        const slot = slots[selectedIndex];
+        if (slot) {
+          const imgEl = slot.querySelector('.layer-img');
+          if (imgEl) positionImageInSlot(imgEl, slot, images[selectedIndex]);
+        }
+        updateAdjustPanel();
+      });
+
+      // preset buttons
+      document.querySelectorAll('[data-preset]').forEach(btn => {
+        btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+      });
+
+      resetLayerBtn.addEventListener('click', () => {
+        if (selectedIndex < 0 || selectedIndex >= images.length) return;
+        Object.assign(images[selectedIndex], {
+          weight: 1, offsetY: 0, offsetX: 0, zoom: 100, fitMode: 'cover'
+        });
+        renderPage();
+      });
+
+      deleteLayerBtn.addEventListener('click', () => {
+        if (selectedIndex < 0 || selectedIndex >= images.length) return;
+        if (!confirm('Delete this layer?')) return;
+        images.splice(selectedIndex, 1);
+        if (selectedIndex >= images.length) selectedIndex = images.length - 1;
+        renderPage();
+      });
+
+      directionToggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const dir = btn.dataset.dir;
+        if (!dir || dir === currentOrientation) return;
+        directionToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentOrientation = dir;
+        updatePaperStyle();
+      });
+
+      paperFormatSelect.addEventListener('change', (e) => {
+        currentFormat = e.target.value;
+        updatePaperStyle();
+      });
+
+      exportBtn.addEventListener('click', () => {
+        if (images.length === 0) return;
+        const { width, height } = getExportDimensions();
+        const fmt = exportFormatSelect.value.toUpperCase();
+        exportModalText.textContent = `Export ${images.length} layer(s) as ${fmt} at ${width}×${height}px?`;
+        exportModal.classList.add('active');
+      });
+
+      cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('active'));
+      confirmExportBtn.addEventListener('click', () => {
+        exportModal.classList.remove('active');
+        exportPage();
+      });
+      exportModal.addEventListener('click', (e) => {
+        if (e.target === exportModal) exportModal.classList.remove('active');
+      });
+
+      pageComposer.addEventListener('dragover', (e) => e.preventDefault());
+      pageComposer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
+      });
+
+      // reposition on window resize
+      window.addEventListener('resize', () => {
+        const slots = pageComposer.querySelectorAll('.layer-slot');
+        slots.forEach((s, i) => {
+          const ie = s.querySelector('.layer-img');
+          if (ie && images[i]) positionImageInSlot(ie, s, images[i]);
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          selectedIndex = -1;
+          renderPage();
+        }
+      });
+
+      // init
+      updatePaperStyle();
+      renderPage();
+    })();
+  </script>
+</body>
+</html>

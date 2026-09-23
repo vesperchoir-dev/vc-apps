@@ -1,0 +1,2322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piece Editor v3</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            height: 100vh;
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            height: calc(100vh - 24px);
+            margin: 0 auto;
+            background: #111111;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+        }
+
+        .header {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+        .header h1 { font-size: 1.2rem; font-weight: 500; color: #ffffff; letter-spacing: -0.01em; }
+        .header p { font-size: 0.8rem; color: #888; }
+
+        .main-content {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        .image-section {
+            flex: 1;
+            background: #0d0d0d;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            height: 100%;
+            border: 1px solid #2a2a2a;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: #080808;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+            min-height: 0;
+            position: relative;
+        }
+        .canvas-container.panning { cursor: grabbing; }
+
+        #canvasViewport {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        #imageCanvas {
+            display: block;
+        }
+
+        .tools-panel {
+            width: 320px;
+            background: #0d0d0d;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #2a2a2a;
+            overflow-y: auto;
+            height: 100%;
+        }
+        .tools-panel::-webkit-scrollbar { width: 4px; }
+        .tools-panel::-webkit-scrollbar-track { background: #1a1a1a; }
+        .tools-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .tools-panel h3 {
+            font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: #888; margin-bottom: 12px;
+        }
+
+        .section {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 16px;
+            border: 1px solid #2a2a2a;
+        }
+        .section:last-child { margin-bottom: 0; }
+
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+        }
+        .section-header h3 { margin-bottom: 0; }
+
+        .color-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .color-preview {
+            width: 40px; height: 40px; border-radius: 8px;
+            border: 2px solid #333; background: #fff;
+        }
+        .color-info { flex: 1; }
+        .color-info p { font-size: 0.7rem; color: #888; margin-top: 2px; }
+
+        .slider-group { margin-bottom: 12px; }
+        .slider-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+        }
+        .slider-header label { font-size: 0.75rem; color: #ccc; }
+        .value-display {
+            font-size: 0.7rem; color: #aaa; background: #252525;
+            padding: 2px 8px; border-radius: 12px; border: 1px solid #333;
+        }
+
+        .value-input {
+            width: 60px;
+            font-size: 0.7rem;
+            color: #aaa;
+            background: #252525;
+            padding: 2px 6px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            text-align: right;
+            outline: none;
+            font-family: inherit;
+            -moz-appearance: textfield;
+        }
+        .value-input::-webkit-outer-spin-button,
+        .value-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .value-input:focus { border-color: #7851A9; color: #fff; background: #2a2a2a; }
+
+        .value-row { display: flex; align-items: center; gap: 4px; }
+        .value-unit { font-size: 0.65rem; color: #888; }
+
+        .slider {
+            width: 100%; height: 4px; -webkit-appearance: none;
+            background: #2a2a2a; border-radius: 4px; outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 14px; height: 14px;
+            background: #7851A9; border-radius: 50%; cursor: pointer;
+            border: 2px solid #9A6BBE; transition: 0.1s;
+        }
+        .slider::-webkit-slider-thumb:hover { transform: scale(1.15); background: #9A6BBE; }
+        .slider:disabled { opacity: 0.4; cursor: not-allowed; }
+        .slider:disabled::-webkit-slider-thumb { cursor: not-allowed; background: #555; border-color: #666; }
+
+        .expand-preview {
+            display: flex; align-items: center; gap: 8px; margin-top: 8px;
+            padding: 6px 10px; background: #1f1f1f; border-radius: 20px;
+            font-size: 0.7rem; color: #aaa; border: 1px solid #333;
+        }
+        .expand-indicator {
+            width: 10px; height: 10px; border-radius: 2px; background: #7851A9;
+        }
+
+        .button-full {
+            width: 100%; background: #7851A9; color: white; border: none;
+            padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 500;
+            cursor: pointer; transition: all 0.2s; margin: 4px 0;
+            border: 1px solid #9A6BBE;
+        }
+        .button-full:hover { background: #9A6BBE; transform: translateY(-1px); box-shadow: 0 8px 20px -8px #7851A9; }
+        .button-full.secondary { background: #2d2d2d; border-color: #444; margin-bottom: 20px; }
+        .button-full.secondary:hover { background: #3d3d3d; }
+        .button-full:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+
+        .btn {
+            background: #1f1f1f; color: #ddd; border: 1px solid #333;
+            padding: 8px; border-radius: 8px; font-size: 0.7rem;
+            cursor: pointer; transition: 0.2s;
+        }
+        .btn:hover { background: #2a2a2a; border-color: #444; color: #fff; }
+        .btn-secondary { background: #1a1a1a; }
+        .btn-success { background: #2d5a27; border-color: #3a6e32; color: #fff; }
+        .btn-success:hover { background: #3a6e32; }
+        .btn-lock { background: #1f1f1f; border-color: #444; color: #ddd; }
+        .btn-lock.locked { background: #b8860b; border-color: #daa520; color: #fff; }
+        .btn-lock.locked:hover { background: #daa520; }
+
+        .page-navigation {
+            display: flex; justify-content: center; align-items: center;
+            gap: 12px; margin-top: 12px; padding: 8px;
+            background: #0d0d0d; border-radius: 30px; border: 1px solid #2a2a2a;
+        }
+        .page-info { font-size: 0.75rem; color: #aaa; }
+
+        .histogram {
+            height: 48px; background: #1a1a1a; margin: 10px 0;
+            border-radius: 8px; border: 1px solid #2a2a2a; overflow: hidden;
+        }
+        .histogram canvas { width: 100%; height: 100%; opacity: 0.8; }
+
+        .quality-control {
+            background: #1a1a1a; padding: 10px; border-radius: 8px;
+            margin: 12px 0; border: 1px solid #2a2a2a;
+        }
+
+        .upload-btn { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+        .page-status { font-size: 0.7rem; color: #888; text-align: center; margin-top: 6px; }
+
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: #1a1a1a; margin: 15vh auto; padding: 20px;
+            border-radius: 16px; width: 320px; border: 1px solid #333;
+        }
+        .modal-content h3 { font-size: 0.9rem; color: #fff; margin-bottom: 8px; }
+        .modal-content p { font-size: 0.8rem; color: #aaa; margin-bottom: 12px; }
+        .modal-buttons {
+            display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;
+        }
+
+        .paper-format-row {
+            display: flex; gap: 8px; margin-bottom: 10px; align-items: center;
+        }
+        .paper-format-row select {
+            flex: 1; background: #1f1f1f; color: #fff; border: 1px solid #333;
+            padding: 6px; border-radius: 6px; font-size: 0.75rem;
+        }
+
+        /* Split overlay */
+        .split-overlay {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; pointer-events: none; display: none;
+        }
+        .split-overlay.active { display: block; }
+        .split-line {
+            position: absolute; background: #7851A9;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.4);
+        }
+        .split-line.vertical {
+            top: 0; bottom: 0; width: 2px; cursor: ew-resize; pointer-events: auto;
+        }
+        .split-line.horizontal {
+            left: 0; right: 0; height: 2px; cursor: ns-resize; pointer-events: auto;
+        }
+        .split-handle {
+            position: absolute; background: #7851A9; border: 2px solid #fff;
+            border-radius: 50%; width: 16px; height: 16px; cursor: grab;
+            pointer-events: auto; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
+        }
+        .split-handle:hover { transform: scale(1.2); }
+        .split-handle:active { cursor: grabbing; }
+
+        .split-badge {
+            position: absolute; background: rgba(102, 126, 234, 0.95);
+            color: white; padding: 4px 10px; border-radius: 12px;
+            font-size: 0.7rem; font-weight: 500; pointer-events: none;
+            white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+        .split-badge.top { top: 8px; left: 50%; transform: translateX(-50%); }
+        .split-badge.left { left: 8px; top: 50%; transform: translateY(-50%); }
+
+        /* Crop overlay */
+        .crop-overlay {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; pointer-events: none; display: none;
+        }
+        .crop-overlay.active { display: block; }
+        .crop-dim {
+            position: absolute; background: rgba(0, 0, 0, 0.55); pointer-events: none;
+        }
+        .crop-box {
+            position: absolute; border: 2px solid #fada5e;
+            box-shadow: 0 0 10px rgba(245, 166, 35, 0.6), inset 0 0 0 1px rgba(255,255,255,0.3);
+            pointer-events: none; box-sizing: border-box;
+        }
+        .crop-handle {
+            position: absolute; width: 14px; height: 14px;
+            background: #fada5e; border: 2px solid #fff;
+            border-radius: 3px; pointer-events: auto;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+        .crop-handle.nw { cursor: nwse-resize; }
+        .crop-handle.ne { cursor: nesw-resize; }
+        .crop-handle.sw { cursor: nesw-resize; }
+        .crop-handle.se { cursor: nwse-resize; }
+        .crop-handle.n  { cursor: ns-resize; }
+        .crop-handle.s  { cursor: ns-resize; }
+        .crop-handle.e  { cursor: ew-resize; }
+        .crop-handle.w  { cursor: ew-resize; }
+
+        .crop-badge {
+            position: absolute; background: rgba(250, 166, 94, 0.95);
+            color: #111; padding: 4px 10px; border-radius: 12px;
+            font-size: 0.7rem; font-weight: 600; pointer-events: none;
+            white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Toggle switch */
+        .toggle-switch { position: relative; display: inline-block; width: 34px; height: 18px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333; border-radius: 18px; transition: 0.2s;
+            border: 1px solid #444;
+        }
+        .toggle-slider:before {
+            position: absolute; content: ""; height: 12px; width: 12px;
+            left: 2px; bottom: 2px; background-color: #aaa;
+            border-radius: 50%; transition: 0.2s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background-color: #7851A9; border-color: #9A6BBE; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); background-color: #fff; }
+        .toggle-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.75rem; color: #ccc; cursor: pointer;
+        }
+
+        .split-settings { margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a2a2a; }
+        .split-settings.hidden { display: none; }
+
+        .direction-toggle {
+            display: flex; background: #0d0d0d; border-radius: 8px;
+            border: 1px solid #333; overflow: hidden; margin-bottom: 12px;
+        }
+        .direction-toggle button {
+            flex: 1; background: transparent; color: #aaa; border: none;
+            padding: 6px 8px; font-size: 0.7rem; cursor: pointer; transition: 0.15s;
+        }
+        .direction-toggle button.active { background: #7851A9; color: #fff; }
+        .direction-toggle button:hover:not(.active) { background: #222; color: #fff; }
+
+        .info-text { color: #666; font-size: 0.65rem; margin-top: 4px; font-style: italic; }
+
+        .crop-preset-row {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 4px; margin-bottom: 8px;
+        }
+        .crop-preset-row .btn { font-size: 0.65rem; padding: 6px 4px; }
+
+        .action-mini {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
+        }
+
+        .lock-banner {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; background: rgba(184, 134, 11, 0.15);
+            border: 1px solid #b8860b; border-radius: 8px;
+            margin-bottom: 12px; font-size: 0.7rem; color: #daa520;
+        }
+        .lock-banner.hidden { display: none; }
+        .lock-banner .lock-icon { font-size: 0.9rem; }
+        .lock-banner strong { color: #f0c040; }
+
+        .selection-info {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; background: #1f1f1f; border-radius: 8px;
+            margin-top: 8px; font-size: 0.7rem; border: 1px solid #2a2a2a;
+        }
+        .selection-info .label { color: #888; }
+        .selection-info .value { color: #7851A9; font-weight: 600; }
+
+        .lock-row { display: flex; gap: 6px; margin-top: 10px; }
+        .lock-row .btn { flex: 1; padding: 10px 8px; font-weight: 500; }
+
+        .mode-toggle {
+            display: flex; background: #0d0d0d; border-radius: 8px;
+            border: 1px solid #333; overflow: hidden; margin-bottom: 12px;
+        }
+        .mode-toggle button {
+            flex: 1; background: transparent; color: #aaa; border: none;
+            padding: 7px 8px; font-size: 0.7rem; cursor: pointer; transition: 0.15s;
+        }
+        .mode-toggle button.active { background: #7851A9; color: #fff; }
+        .mode-toggle button:hover:not(.active) { background: #222; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Piece Editor</h1>
+            <p>for VC custodians</p>
+        </div>
+
+        <div class="main-content">
+            <div class="image-section">		
+                <div class="canvas-container" id="canvasContainer">
+                    <div id="canvasViewport">
+                        <canvas id="imageCanvas"></canvas>
+                        <div class="split-overlay" id="splitOverlay">
+                            <div class="split-line" id="splitLine"></div>
+                            <div class="split-handle" id="splitHandle"></div>
+                            <div class="split-badge top" id="splitBadge">50%</div>
+                        </div>
+                        <div class="crop-overlay" id="cropOverlay">
+                            <div class="crop-dim" id="cropDimTop"></div>
+                            <div class="crop-dim" id="cropDimBottom"></div>
+                            <div class="crop-dim" id="cropDimLeft"></div>
+                            <div class="crop-dim" id="cropDimRight"></div>
+                            <div class="crop-box" id="cropBox">
+                                <div class="crop-handle nw" data-h="nw"></div>
+                                <div class="crop-handle n"  data-h="n"></div>
+                                <div class="crop-handle ne" data-h="ne"></div>
+                                <div class="crop-handle e"  data-h="e"></div>
+                                <div class="crop-handle se" data-h="se"></div>
+                                <div class="crop-handle s"  data-h="s"></div>
+                                <div class="crop-handle sw" data-h="sw"></div>
+                                <div class="crop-handle w"  data-h="w"></div>
+                            </div>
+                            <div class="crop-badge" id="cropBadge">crop</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-navigation" id="pageNavigation" style="display: none;">
+                    <button class="btn" onclick="previousPage()">←</button>
+                    <span class="page-info" id="pageInfo">1 / 1</span>
+                    <button class="btn" onclick="nextPage()">→</button>
+                </div>
+                <div class="page-status" id="pageStatus" style="display: none;"></div>
+
+                <div class="upload-btn">
+                    <input type="file" id="fileInput" accept="image/*,.pdf" multiple style="display: none;">
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">📁 open</button>
+                    <button class="btn" onclick="resetImage()">↺ reset</button>
+                    <button class="btn" onclick="resetAllPages()">↺ reset all pages</button> 
+                    <button class="btn" onclick="fitToContainer()">⤢ reset view</button>
+                </div>
+            </div>
+
+            <div class="tools-panel">
+                <div class="section">
+                    <h3>color selection</h3>
+                    <div class="lock-banner hidden" id="lockBanner">
+                        <span class="lock-icon">🔒</span>
+                        <span><strong>Selection locked</strong> — tune fuzziness & expansion below</span>
+                    </div>
+                    <div class="mode-toggle">
+                        <button id="modeSingleBtn" class="active" onclick="setClickMode('single')">🎯 single point</button>
+                        <button id="modeBrushBtn" onclick="setClickMode('brush')">🖌️ multi-point</button>
+                    </div>
+                    <div class="color-row">
+                        <div class="color-preview" id="colorPreview"></div>
+                        <div class="color-info">
+                            <span style="color: #fff; font-size: 0.8rem;" id="colorLabel">selected</span>
+                            <p id="colorHint">click on image</p>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>tolerance</label>
+                            <input type="number" class="value-input" id="toleranceValue" min="0" max="100" value="0">
+                        </div>
+                        <input type="range" id="tolerance" class="slider" min="0" max="100" value="0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>fuzziness</label>
+                            <input type="number" class="value-input" id="fuzzinessValue" min="0" max="50" value="15">
+                        </div>
+                        <input type="range" id="fuzziness" class="slider" min="0" max="50" value="15">
+                    </div>
+                    <div class="selection-info">
+                        <span class="label">selected pixels</span>
+                        <span class="value" id="selectedCount">0</span>
+                    </div>
+                    <div class="lock-row">
+                        <button class="btn btn-lock" id="lockBtn" onclick="toggleLock()">lock selection</button>
+                        <button class="btn" onclick="clearSelection()">clear</button>
+                    </div>
+
+                </div>
+
+                <div class="section">
+                    <h3>expansion</h3>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>expand by</label>
+                            <div class="value-row">
+                                <input type="number" class="value-input" id="expandValue" min="0" max="50" value="0">
+                                <span class="value-unit">px</span>
+                            </div>
+                        </div>
+                        <input type="range" id="expandAmount" class="slider" min="0" max="50" value="0">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>levels</h3>
+                    <div class="histogram">
+                        <canvas id="histogramCanvas" width="250" height="48"></canvas>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>shadows</label>
+                            <input type="number" class="value-input" id="shadowsValue" min="0" max="255" value="0">
+                        </div>
+                        <input type="range" id="shadows" class="slider" min="0" max="255" value="0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>gamma</label>
+                            <input type="number" class="value-input" id="midtonesValue" min="0.1" max="9.9" step="0.1" value="1.0">
+                        </div>
+                        <input type="range" id="midtones" class="slider" min="0.1" max="9.9" step="0.1" value="1.0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>highlights</label>
+                            <input type="number" class="value-input" id="highlightsValue" min="0" max="255" value="255">
+                        </div>
+                        <input type="range" id="highlights" class="slider" min="0" max="255" value="255">
+                    </div>
+					<div class="button-grid" style="margin-top: 6px;">
+						<button class="btn" onclick="resetLevels()">reset levels</button>
+						<button class="btn btn-secondary" onclick="toggleSelection()">toggle selection</button>
+					</div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h3>crop</h3>
+                        <label class="toggle-label">
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="cropToggle">
+                                <span class="toggle-slider"></span>
+                            </span>
+                        </label>
+                    </div>
+                    <div id="cropSettings" class="split-settings hidden">
+                        <div class="info-text" style="margin-bottom:10px;">
+                            drag the yellow handles to resize · drag inside to move
+                        </div>
+                        <div class="crop-preset-row">
+                            <button class="btn" onclick="cropPreset('center-90')">90%</button>
+                            <button class="btn" onclick="cropPreset('center-75')">75%</button>
+                            <button class="btn" onclick="cropPreset('center-50')">50%</button>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>left inset</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="cropLeftVal" min="0" value="0">
+                                    <span class="value-unit">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="cropLeft" class="slider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>right inset</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="cropRightVal" min="0" value="0">
+                                    <span class="value-unit">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="cropRight" class="slider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>top inset</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="cropTopVal" min="0" value="0">
+                                    <span class="value-unit">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="cropTop" class="slider" min="0" max="100" value="0">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>bottom inset</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="cropBottomVal" min="0" value="0">
+                                    <span class="value-unit">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="cropBottom" class="slider" min="0" max="100" value="0">
+                        </div>
+                        <div class="action-mini">
+                            <button class="btn" onclick="resetCrop()">↺ reset crop</button>
+                            <button class="btn" onclick="applyCropPreview()">👁️ preview</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h3>split page</h3>
+                        <label class="toggle-label">
+                            <span class="toggle-switch">
+                                <input type="checkbox" id="splitToggle">
+                                <span class="toggle-slider"></span>
+                            </span>
+                        </label>
+                    </div>
+                    <div id="splitSettings" class="split-settings hidden">
+                        <div class="direction-toggle">
+                            <button id="splitVerticalBtn" class="active" onclick="setSplitDirection('vertical')">⬌ vertical</button>
+                            <button id="splitHorizontalBtn" onclick="setSplitDirection('horizontal')">⬍ horizontal</button>
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>split position</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="splitPositionValue" min="0" max="100" step="0.1" value="50">
+                                    <span class="value-unit">%</span>
+                                </div>
+                            </div>
+                            <input type="range" id="splitPositionSlider" class="slider" min="0" max="100" value="50" step="0.1">
+                        </div>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <label>fine offset</label>
+                                <div class="value-row">
+                                    <input type="number" class="value-input" id="splitOffsetValue" min="-50" max="50" value="0">
+                                    <span class="value-unit">px</span>
+                                </div>
+                            </div>
+                            <input type="range" id="splitOffsetSlider" class="slider" min="-50" max="50" value="0" step="1">
+                        </div>
+                    </div>
+                </div>
+				
+				<button class="button-full" onclick="applyEditToCurrentPage()">Apply edit to current page</button>
+				<button class="button-full secondary" onclick="applyEditToAllPages()">Apply edit to all pages</button>
+				
+                <div class="section">
+                    <h3>export</h3>
+					<div class="quality-control">
+						<div class="slider-header">
+							<label>export quality</label>
+							<div class="value-row">
+								<input type="number" class="value-input" id="qualityValue" min="1" max="100" value="100">
+								<span class="value-unit">%</span>
+							</div>
+						</div>
+						<input type="range" id="exportQuality" class="slider" min="1" max="100" value="100">
+					</div>
+					
+                    <div class="paper-format-row">
+                        <select id="paperFormat">
+                            <option value="letter">Letter (8.5 x 11 in)</option>
+                            <option value="legal">Legal (8.5 x 14 in)</option>
+                            <option value="a4">A4 (210 x 297 mm)</option>
+                            <option value="a3">A3 (297 x 420 mm)</option>
+                        </select>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <label>scale to fit</label>
+                            <span class="value-display" id="fitModeValue">height</span>
+                        </div>
+                        <div style="display: flex; gap: 6px; margin-top: 4px;">
+                            <button class="btn" id="fitHeightBtn" style="flex: 1; background: #7851A9; color: white;" onclick="setFitMode('height')">📏 fit height</button>
+                            <button class="btn" id="fitWidthBtn" style="flex: 1;" onclick="setFitMode('width')">📐 fit width</button>
+                        </div>
+                    </div>
+                    <div class="expand-preview" style="justify-content: space-between;">
+                        <span>orientation:</span>
+                        <div style="display: flex; gap: 8px;">
+                            <label style="color: #ccc; font-size: 0.7rem;">
+                                <input type="radio" name="orientation" value="portrait" checked onchange="updateOrientation()"> portrait
+                            </label>
+                            <label style="color: #ccc; font-size: 0.7rem;">
+                                <input type="radio" name="orientation" value="landscape" onchange="updateOrientation()"> landscape
+                            </label>
+                        </div>
+                    </div>
+					<div class="button-grid">
+						<button class="btn" onclick="showExportModal('images')">🖼️ images</button>
+						<button class="btn" onclick="exportWithPaperFormat()">📄 pdf</button>
+					</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">export</h3>
+            <p id="modalMessage"></p>
+            <div id="modalOptions"></div>
+            <div class="modal-buttons">
+                <button class="btn" onclick="closeModal()">cancel</button>
+                <button class="btn" style="background: #7851A9; color: white;" onclick="confirmExport()">export</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const histogramCanvas = document.getElementById('histogramCanvas');
+        const histCtx = histogramCanvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const viewport = document.getElementById('canvasViewport');
+
+        let originalImageData = null;
+        let currentImageData = null;
+        let selectionMask = null;
+        let isSelectionActive = false;
+        let hasSelectedColor = false;
+
+        let selectedColors = [];
+        let selectionLocked = false;
+        let clickMode = 'single';
+        const MAX_COLORS = 8;
+        let selectedColor = {r: 255, g: 255, b: 255};
+        let lockedBaseMask = null;
+
+        let pdfDoc = null;
+        let pdfPages = [];
+        let editedPages = {};
+        let currentPage = 1;
+        let totalPages = 1;
+        let exportType = '';
+        let isMultiImageMode = false;
+        let imageFiles = [];
+
+        let fitMode = 'height';
+        let currentOrientation = 'portrait';
+
+        let splitEnabled = false;
+        let splitDirection = 'vertical';
+        let splitPosition = 0.5;
+        let splitOffset = 0;
+
+        let cropEnabled = false;
+        let cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
+
+        let pageSplitSettings = {};
+        let pageCropSettings = {};
+
+		let toggleSel = 1;
+		
+        const paperFormats = {
+            letter: { width: 612, height: 792 },
+            legal: { width: 612, height: 1008 },
+            a4: { width: 595, height: 842 },
+            a3: { width: 842, height: 1191 }
+        };
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // ============ ZOOM / PAN ============
+        let zoom = 1;
+        let panX = 0;
+        let panY = 0;
+        const MIN_ZOOM = 0.05;
+        const MAX_ZOOM = 40;
+
+        function applyTransform() {
+            viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            updateSplitOverlayPosition();
+            updateCropOverlay();
+        }
+
+        function resetView() {
+            zoom = 1;
+            panX = 0;
+            panY = 0;
+            applyTransform();
+        }
+
+        function fitToContainer() {
+            if (!canvas.width || !canvas.height) return;
+            const rect = canvasContainer.getBoundingClientRect();
+            const pad = 24;
+            const availW = rect.width - pad;
+            const availH = rect.height - pad;
+            if (availW <= 0 || availH <= 0) return;
+            zoom = Math.min(availW / canvas.width, availH / canvas.height);
+            panX = (rect.width - canvas.width * zoom) / 2;
+            panY = (rect.height - canvas.height * zoom) / 2;
+            applyTransform();
+        }
+
+        canvasContainer.addEventListener('wheel', (e) => {
+            if (!originalImageData) return;
+            e.preventDefault();
+            const rect = canvasContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const localX = (mouseX - panX) / zoom;
+            const localY = (mouseY - panY) / zoom;
+            const delta = -e.deltaY * 0.0015;
+            const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * (1 + delta)));
+            panX = mouseX - localX * newZoom;
+            panY = mouseY - localY * newZoom;
+            zoom = newZoom;
+            applyTransform();
+        }, { passive: false });
+
+        let isPanning = false;
+        let panStart = null;
+        let panMoved = false;
+
+        canvasContainer.addEventListener('mousedown', (e) => {
+            if (!originalImageData) return;
+            if (e.target.closest('.crop-handle') || e.target.id === 'splitHandle' ||
+                e.target.id === 'splitLine' || e.target.closest('#cropBox')) return;
+            isPanning = true;
+            panMoved = false;
+            panStart = { x: e.clientX - panX, y: e.clientY - panY };
+            canvasContainer.classList.add('panning');
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            const newX = e.clientX - panStart.x;
+            const newY = e.clientY - panStart.y;
+            if (Math.abs(newX - panX) > 3 || Math.abs(newY - panY) > 3) panMoved = true;
+            panX = newX;
+            panY = newY;
+            applyTransform();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isPanning) {
+                isPanning = false;
+                canvasContainer.classList.remove('panning');
+            }
+        });
+
+        canvasContainer.addEventListener('dblclick', (e) => {
+            if (!originalImageData) return;
+            resetView();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (!originalImageData) return;
+            if (e.key === '0') resetView();
+            else if (e.key === '+' || e.key === '=') zoomAtCenter(zoom * 1.2);
+            else if (e.key === '-' || e.key === '_') zoomAtCenter(zoom / 1.2);
+            else if (e.key.toLowerCase() === 'f') fitToContainer();
+        });
+
+        function zoomAtCenter(newZoom) {
+            const rect = canvasContainer.getBoundingClientRect();
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const localX = (cx - panX) / zoom;
+            const localY = (cy - panY) / zoom;
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+            panX = cx - localX * zoom;
+            panY = cy - localY * zoom;
+            applyTransform();
+        }
+
+        // ============ SLIDER <-> NUMBER-INPUT BINDING ============
+        function bindSlider(sliderId, inputId, onChange) {
+            const slider = document.getElementById(sliderId);
+            const input  = document.getElementById(inputId);
+            if (!slider || !input) return;
+
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const step = parseFloat(slider.step) || 1;
+
+            function clamp(v) {
+                if (isNaN(v)) return parseFloat(slider.value);
+                return Math.max(min, Math.min(max, v));
+            }
+
+            slider.addEventListener('input', () => {
+                input.value = slider.value;
+                if (onChange) onChange(slider.value);
+            });
+
+            input.addEventListener('input', () => {
+                let v = parseFloat(input.value);
+                if (isNaN(v)) return;
+                v = clamp(v);
+                slider.value = v;
+                if (onChange) onChange(v);
+            });
+
+            input.addEventListener('blur', () => {
+                let v = clamp(parseFloat(input.value));
+                const steps = Math.round((v - min) / step);
+                v = min + steps * step;
+                v = clamp(parseFloat(v.toFixed(4)));
+                input.value = v;
+                slider.value = v;
+                if (onChange) onChange(v);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') input.blur();
+            });
+        }
+
+        bindSlider('tolerance', 'toleranceValue', () => livePreviewSelection());
+        bindSlider('fuzziness', 'fuzzinessValue', () => livePreviewSelection());
+        bindSlider('expandAmount', 'expandValue', () => livePreviewSelection());
+        bindSlider('shadows', 'shadowsValue', () => livePreviewLevels());
+        bindSlider('midtones', 'midtonesValue', () => livePreviewLevels());
+        bindSlider('highlights', 'highlightsValue', () => livePreviewLevels());
+        bindSlider('exportQuality', 'qualityValue', null);
+
+        // ============ CLICK MODE ============
+        function setClickMode(mode) {
+            clickMode = mode;
+            document.getElementById('modeSingleBtn').classList.toggle('active', mode === 'single');
+            document.getElementById('modeBrushBtn').classList.toggle('active', mode === 'brush');
+            updateColorHint();
+        }
+
+        function updateColorHint() {
+            const hint = document.getElementById('colorHint');
+            const label = document.getElementById('colorLabel');
+            if (selectionLocked) {
+                label.textContent = 'locked';
+                hint.textContent = 'unlock to add more colors';
+                return;
+            }
+            if (selectedColors.length > 0) {
+                label.textContent = `${selectedColors.length} color${selectedColors.length > 1 ? 's' : ''}`;
+                hint.textContent = clickMode === 'brush' ? 'click to add more · right-click to remove last' : 'click to replace';
+            } else {
+                label.textContent = 'selected';
+                hint.textContent = clickMode === 'brush' ? 'click multiple spots' : 'click on image';
+            }
+        }
+
+        canvas.addEventListener('contextmenu', (e) => {
+            if (selectionLocked) return;
+            if (selectedColors.length === 0) return;
+            e.preventDefault();
+            selectedColors.pop();
+            if (selectedColors.length > 0) {
+                selectedColor = selectedColors[selectedColors.length - 1];
+                document.getElementById('colorPreview').style.backgroundColor =
+                    `rgb(${selectedColor.r}, ${selectedColor.g}, ${selectedColor.b})`;
+            } else {
+                document.getElementById('colorPreview').style.backgroundColor = '#fff';
+                selectionMask = null;
+                isSelectionActive = false;
+                hasSelectedColor = false;
+            }
+            recomputeFromColors();
+            updateColorHint();
+        });
+
+        // ============ LOCK / UNLOCK ============
+        function toggleLock() {
+            if (!hasSelectedColor || selectedColors.length === 0) {
+                alert('Pick at least one color first');
+                return;
+            }
+            if (!selectionLocked) {
+                snapshotLockedState();
+                selectionLocked = true;
+            } else {
+                selectionLocked = false;
+                lockedBaseMask = null;
+            }
+            updateLockUI();
+            updateColorHint();
+        }
+
+        function snapshotLockedState() {
+            const tolerance = parseInt(document.getElementById('tolerance').value);
+            const fuzziness = parseInt(document.getElementById('fuzziness').value);
+            selectedColors.forEach(c => {
+                c.tolerance = tolerance;
+                c.fuzziness = fuzziness;
+            });
+            computeBaseMask();
+            lockedBaseMask = new Uint8Array(selectionMask);
+        }
+
+        function updateLockUI() {
+            const btn = document.getElementById('lockBtn');
+            const banner = document.getElementById('lockBanner');
+            const toleranceSlider = document.getElementById('tolerance');
+            if (selectionLocked) {
+                btn.classList.add('locked');
+                btn.textContent = '🔒 unlock selection';
+                banner.classList.remove('hidden');
+                toleranceSlider.disabled = true;
+            } else {
+                btn.classList.remove('locked');
+                btn.textContent = '🔓 lock selection';
+                banner.classList.add('hidden');
+                toleranceSlider.disabled = false;
+            }
+        }
+
+        function clearSelection() {
+            selectedColors = [];
+            selectedColor = {r: 255, g: 255, b: 255};
+            selectionMask = null;
+            lockedBaseMask = null;
+            isSelectionActive = false;
+            hasSelectedColor = false;
+            selectionLocked = false;
+            document.getElementById('colorPreview').style.backgroundColor = '#fff';
+            updateLockUI();
+            updateColorHint();
+            updateSelectedCount(0);
+            if (originalImageData) {
+                const base = (editedPages && editedPages[currentPage]) ? editedPages[currentPage] : originalImageData;
+                ctx.putImageData(base, 0, 0);
+                currentImageData = new ImageData(
+                    new Uint8ClampedArray(base.data),
+                    canvas.width, canvas.height
+                );
+                updateHistogram();
+            }
+        }
+
+        function updateSelectedCount(count) {
+            const el = document.getElementById('selectedCount');
+            if (count === undefined) count = 0;
+            el.textContent = count.toLocaleString();
+        }
+
+        // ============ CORE SELECTION LOGIC ============
+        function computeBaseMask() {
+            if (!originalImageData) return;
+            const width = canvas.width, height = canvas.height;
+            selectionMask = new Uint8Array(width * height);
+            for (const color of selectedColors) {
+                const tol = color.tolerance !== undefined ? color.tolerance : 0;
+                const fz = color.fuzziness !== undefined ? color.fuzziness : 0;
+                for (let i = 0; i < selectionMask.length; i++) {
+                    const pixelIndex = i * 4;
+                    const r = originalImageData.data[pixelIndex];
+                    const g = originalImageData.data[pixelIndex + 1];
+                    const b = originalImageData.data[pixelIndex + 2];
+                    const dr = r - color.r, dg = g - color.g, db = b - color.b;
+                    const difference = Math.sqrt(0.299 * dr * dr + 0.587 * dg * dg + 0.114 * db * db);
+                    let v = 0;
+                    if (difference <= tol) v = 255;
+                    else if (difference <= tol + fz) {
+                        const softness = 1 - (difference - tol) / fz;
+                        v = Math.floor(softness * 255);
+                    }
+                    if (v > selectionMask[i]) selectionMask[i] = v;
+                }
+            }
+        }
+
+        function computeSelectionMask() {
+            if (!originalImageData) return;
+            const tolerance = parseInt(document.getElementById('tolerance').value);
+            const fuzziness = parseInt(document.getElementById('fuzziness').value);
+            const expandAmount = parseInt(document.getElementById('expandAmount').value);
+            const width = canvas.width, height = canvas.height;
+            selectionMask = new Uint8Array(width * height);
+            if (selectedColors.length === 0) return;
+            for (const color of selectedColors) {
+                const tol = selectionLocked && color.tolerance !== undefined ? color.tolerance : tolerance;
+                const fz = selectionLocked && color.fuzziness !== undefined ? color.fuzziness : fuzziness;
+                for (let i = 0; i < selectionMask.length; i++) {
+                    const pixelIndex = i * 4;
+                    const r = originalImageData.data[pixelIndex];
+                    const g = originalImageData.data[pixelIndex + 1];
+                    const b = originalImageData.data[pixelIndex + 2];
+                    const dr = r - color.r, dg = g - color.g, db = b - color.b;
+                    const difference = Math.sqrt(0.299 * dr * dr + 0.587 * dg * dg + 0.114 * db * db);
+                    let v = 0;
+                    if (difference <= tol) v = 255;
+                    else if (difference <= tol + fz) {
+                        const softness = 1 - (difference - tol) / fz;
+                        v = Math.floor(softness * 255);
+                    }
+                    if (v > selectionMask[i]) selectionMask[i] = v;
+                }
+            }
+            if (expandAmount > 0) {
+                selectionMask = expandMask(selectionMask, expandAmount, width, height);
+            }
+        }
+
+        function recomputeFromLocked() {
+            if (!lockedBaseMask) return;
+            const fuzziness = parseInt(document.getElementById('fuzziness').value);
+            const expandAmount = parseInt(document.getElementById('expandAmount').value);
+            const width = canvas.width, height = canvas.height;
+            if (fuzziness <= 0) {
+                selectionMask = new Uint8Array(lockedBaseMask);
+            } else {
+                selectionMask = featherMask(lockedBaseMask, fuzziness, width, height);
+            }
+            if (expandAmount > 0) {
+                selectionMask = expandMask(selectionMask, expandAmount, width, height);
+            }
+        }
+
+        function featherMask(mask, radius, width, height) {
+            const temp = new Float32Array(mask.length);
+            const out = new Uint8Array(mask.length);
+            for (let y = 0; y < height; y++) {
+                let sum = 0, count = 0;
+                for (let x = 0; x < Math.min(radius, width); x++) { sum += mask[y * width + x]; count++; }
+                for (let x = 0; x < width; x++) {
+                    const right = x + radius;
+                    if (right < width) { sum += mask[y * width + right]; count++; }
+                    const left = x - radius - 1;
+                    if (left >= 0) { sum -= mask[y * width + left]; count--; }
+                    temp[y * width + x] = count > 0 ? sum / count : 0;
+                }
+            }
+            for (let x = 0; x < width; x++) {
+                let sum = 0, count = 0;
+                for (let y = 0; y < Math.min(radius, height); y++) { sum += temp[y * width + x]; count++; }
+                for (let y = 0; y < height; y++) {
+                    const bottom = y + radius;
+                    if (bottom < height) { sum += temp[bottom * width + x]; count++; }
+                    const top = y - radius - 1;
+                    if (top >= 0) { sum -= temp[top * width + x]; count--; }
+                    out[y * width + x] = Math.max(0, Math.min(255, Math.round(count > 0 ? sum / count : 0)));
+                }
+            }
+            return out;
+        }
+
+        function recomputeFromColors() {
+            if (selectedColors.length === 0) {
+                selectionMask = null;
+                isSelectionActive = false;
+                hasSelectedColor = false;
+                return;
+            }
+            computeSelectionMask();
+            visualizeSelection();
+            isSelectionActive = true;
+            hasSelectedColor = true;
+            updateSelectedCount(countNonZero(selectionMask));
+        }
+
+        function countNonZero(mask) {
+            if (!mask) return 0;
+            let n = 0;
+            for (let i = 0; i < mask.length; i++) if (mask[i] > 0) n++;
+            return n;
+        }
+
+        function livePreviewSelection() {
+            if (!hasSelectedColor || !originalImageData) return;
+            if (selectionLocked && lockedBaseMask) recomputeFromLocked();
+            else computeSelectionMask();
+            visualizeSelection();
+            isSelectionActive = true;
+            updateSelectedCount(countNonZero(selectionMask));
+			toggleSel = 1;
+        }
+
+        function livePreviewLevels() {
+            if (!originalImageData) return;
+            applyLevelsToCanvas();
+            updateHistogram();
+			toggleSel = 0;
+        }
+
+        // ============ SPLIT LISTENERS ============
+        document.getElementById('splitToggle').addEventListener('change', (e) => {
+            splitEnabled = e.target.checked;
+            document.getElementById('splitSettings').classList.toggle('hidden', !splitEnabled);
+            document.getElementById('splitOverlay').classList.toggle('active', splitEnabled);
+            updateSplitOverlayPosition();
+        });
+
+        bindSlider('splitPositionSlider', 'splitPositionValue', (v) => {
+            splitPosition = parseFloat(v) / 100;
+            updateSplitOverlayPosition();
+        });
+        bindSlider('splitOffsetSlider', 'splitOffsetValue', (v) => {
+            splitOffset = parseInt(v);
+            updateSplitOverlayPosition();
+        });
+
+        function setSplitDirection(dir) {
+            splitDirection = dir;
+            document.getElementById('splitVerticalBtn').classList.toggle('active', dir === 'vertical');
+            document.getElementById('splitHorizontalBtn').classList.toggle('active', dir === 'horizontal');
+            const splitLine = document.getElementById('splitLine');
+            const splitBadge = document.getElementById('splitBadge');
+            splitLine.classList.remove('vertical', 'horizontal');
+            splitLine.classList.add(dir);
+            splitBadge.classList.remove('top', 'left');
+            splitBadge.classList.add(dir === 'vertical' ? 'top' : 'left');
+            updateSplitOverlayPosition();
+        }
+
+        function updateSplitOverlayPosition() {
+            if (!splitEnabled || !originalImageData) return;
+            const W = canvas.width, H = canvas.height;
+            const splitLine = document.getElementById('splitLine');
+            const splitHandle = document.getElementById('splitHandle');
+            const splitBadge = document.getElementById('splitBadge');
+            const invZ = 1 / zoom;
+            const handleSize = 16 * invZ;
+            const halfH = handleSize / 2;
+            const lineThick = 2 * invZ;
+            const badgeScale = invZ;
+
+            if (splitDirection === 'vertical') {
+                let fraction = splitPosition + splitOffset / W;
+                fraction = Math.max(0, Math.min(1, fraction));
+                const xPos = fraction * W;
+                splitLine.style.left = (xPos - lineThick / 2) + 'px';
+                splitLine.style.top = '0px';
+                splitLine.style.height = H + 'px';
+                splitLine.style.width = lineThick + 'px';
+                splitHandle.style.left = (xPos - halfH) + 'px';
+                splitHandle.style.top = (H / 2 - halfH) + 'px';
+                splitHandle.style.width = handleSize + 'px';
+                splitHandle.style.height = handleSize + 'px';
+                splitHandle.style.borderWidth = (2 * invZ) + 'px';
+                splitBadge.style.left = xPos + 'px';
+                splitBadge.style.top = '8px';
+                splitBadge.style.transform = `scale(${badgeScale})`;
+                splitBadge.style.transformOrigin = 'left top';
+                splitBadge.textContent = `split at ${Math.round(fraction * 100)}%`;
+            } else {
+                let fraction = splitPosition + splitOffset / H;
+                fraction = Math.max(0, Math.min(1, fraction));
+                const yPos = fraction * H;
+                splitLine.style.left = '0px';
+                splitLine.style.top = (yPos - lineThick / 2) + 'px';
+                splitLine.style.width = W + 'px';
+                splitLine.style.height = lineThick + 'px';
+                splitHandle.style.left = (W / 2 - halfH) + 'px';
+                splitHandle.style.top = (yPos - halfH) + 'px';
+                splitHandle.style.width = handleSize + 'px';
+                splitHandle.style.height = handleSize + 'px';
+                splitHandle.style.borderWidth = (2 * invZ) + 'px';
+                splitBadge.style.left = '8px';
+                splitBadge.style.top = yPos + 'px';
+                splitBadge.style.transform = `scale(${badgeScale})`;
+                splitBadge.style.transformOrigin = 'left top';
+                splitBadge.textContent = `split at ${Math.round(fraction * 100)}%`;
+            }
+        }
+
+        // ============ CROP LISTENERS ============
+        document.getElementById('cropToggle').addEventListener('change', (e) => {
+            cropEnabled = e.target.checked;
+            document.getElementById('cropSettings').classList.toggle('hidden', !cropEnabled);
+            document.getElementById('cropOverlay').classList.toggle('active', cropEnabled);
+            if (cropEnabled) { resetCrop(); }
+            updateCropOverlay();
+        });
+
+        bindSlider('cropLeft', 'cropLeftVal', (v) => { cropLeft = parseInt(v); updateCropOverlay(); });
+        bindSlider('cropRight', 'cropRightVal', (v) => { cropRight = parseInt(v); updateCropOverlay(); });
+        bindSlider('cropTop', 'cropTopVal', (v) => { cropTop = parseInt(v); updateCropOverlay(); });
+        bindSlider('cropBottom', 'cropBottomVal', (v) => { cropBottom = parseInt(v); updateCropOverlay(); });
+
+        function refreshCropSliderMaxes() {
+            if (!canvas.width || !canvas.height) return;
+            const maxW = Math.floor(canvas.width * 0.95);
+            const maxH = Math.floor(canvas.height * 0.95);
+            document.getElementById('cropLeft').max = maxW;
+            document.getElementById('cropRight').max = maxW;
+            document.getElementById('cropTop').max = maxH;
+            document.getElementById('cropBottom').max = maxH;
+            document.getElementById('cropLeftVal').max = maxW;
+            document.getElementById('cropRightVal').max = maxW;
+            document.getElementById('cropTopVal').max = maxH;
+            document.getElementById('cropBottomVal').max = maxH;
+        }
+
+        function resetCrop() {
+            cropLeft = cropRight = cropTop = cropBottom = 0;
+            document.getElementById('cropLeft').value = 0;
+            document.getElementById('cropRight').value = 0;
+            document.getElementById('cropTop').value = 0;
+            document.getElementById('cropBottom').value = 0;
+            document.getElementById('cropLeftVal').value = 0;
+            document.getElementById('cropRightVal').value = 0;
+            document.getElementById('cropTopVal').value = 0;
+            document.getElementById('cropBottomVal').value = 0;
+            updateCropOverlay();
+        }
+
+        function cropPreset(type) {
+            if (!canvas.width) return;
+            const w = canvas.width, h = canvas.height;
+            let frac = 0.05;
+            if (type === 'center-5') frac = 0.125;
+            else if (type === 'center-75') frac = 0.14;
+            else if (type === 'center-50') frac = 0.25;
+            cropLeft = Math.round(w * frac);
+            cropRight = Math.round(w * frac);
+            document.getElementById('cropLeft').value = cropLeft;
+            document.getElementById('cropRight').value = cropRight;
+            document.getElementById('cropLeftVal').value = cropLeft;
+            document.getElementById('cropRightVal').value = cropRight;
+            document.getElementById('cropTopVal').value = cropTop;
+            document.getElementById('cropBottomVal').value = cropBottom;
+            updateCropOverlay();
+        }
+
+        function updateCropOverlay() {
+            if (!cropEnabled || !originalImageData) return;
+            if (!canvas.width || !canvas.height) return;
+            const maxW = canvas.width, maxH = canvas.height;
+            cropLeft = Math.max(0, Math.min(cropLeft, maxW - 10));
+            cropRight = Math.max(0, Math.min(cropRight, maxW - 10 - cropLeft));
+            cropTop = Math.max(0, Math.min(cropTop, maxH - 10));
+            cropBottom = Math.max(0, Math.min(cropBottom, maxH - 10 - cropTop));
+
+            const cropX1 = cropLeft;
+            const cropY1 = cropTop;
+            const cropX2 = canvas.width - cropRight;
+            const cropY2 = canvas.height - cropBottom;
+            const cropW = cropX2 - cropX1;
+            const cropH = cropY2 - cropY1;
+
+            const invZ = 1 / zoom;
+            const handleSize = 14 * invZ;
+            const halfH = handleSize / 2;
+            const borderW = 2 * invZ;
+            const badgeScale = invZ;
+
+            const cropBox = document.getElementById('cropBox');
+            cropBox.style.left = cropX1 + 'px';
+            cropBox.style.top = cropY1 + 'px';
+            cropBox.style.width = cropW + 'px';
+            cropBox.style.height = cropH + 'px';
+            cropBox.style.borderWidth = borderW + 'px';
+
+            document.getElementById('cropDimTop').style.left = '0px';
+            document.getElementById('cropDimTop').style.top = '0px';
+            document.getElementById('cropDimTop').style.width = canvas.width + 'px';
+            document.getElementById('cropDimTop').style.height = cropY1 + 'px';
+
+            document.getElementById('cropDimBottom').style.left = '0px';
+            document.getElementById('cropDimBottom').style.top = cropY2 + 'px';
+            document.getElementById('cropDimBottom').style.width = canvas.width + 'px';
+            document.getElementById('cropDimBottom').style.height = (canvas.height - cropY2) + 'px';
+
+            document.getElementById('cropDimLeft').style.left = '0px';
+            document.getElementById('cropDimLeft').style.top = cropY1 + 'px';
+            document.getElementById('cropDimLeft').style.width = cropX1 + 'px';
+            document.getElementById('cropDimLeft').style.height = cropH + 'px';
+
+            document.getElementById('cropDimRight').style.left = cropX2 + 'px';
+            document.getElementById('cropDimRight').style.top = cropY1 + 'px';
+            document.getElementById('cropDimRight').style.width = (canvas.width - cropX2) + 'px';
+            document.getElementById('cropDimRight').style.height = cropH + 'px';
+
+            const handles = cropBox.querySelectorAll('.crop-handle');
+            handles.forEach(h => {
+                h.style.width = handleSize + 'px';
+                h.style.height = handleSize + 'px';
+                h.style.borderWidth = (2 * invZ) + 'px';
+                const pos = h.dataset.h;
+                if (pos === 'nw') { h.style.left = (-halfH) + 'px'; h.style.top = (-halfH) + 'px'; }
+                if (pos === 'n')  { h.style.left = (cropW/2 - halfH) + 'px'; h.style.top = (-halfH) + 'px'; }
+                if (pos === 'ne') { h.style.left = (cropW - halfH) + 'px'; h.style.top = (-halfH) + 'px'; }
+                if (pos === 'e')  { h.style.left = (cropW - halfH) + 'px'; h.style.top = (cropH/2 - halfH) + 'px'; }
+                if (pos === 'se') { h.style.left = (cropW - halfH) + 'px'; h.style.top = (cropH - halfH) + 'px'; }
+                if (pos === 's')  { h.style.left = (cropW/2 - halfH) + 'px'; h.style.top = (cropH - halfH) + 'px'; }
+                if (pos === 'sw') { h.style.left = (-halfH) + 'px'; h.style.top = (cropH - halfH) + 'px'; }
+                if (pos === 'w')  { h.style.left = (-halfH) + 'px'; h.style.top = (cropH/2 - halfH) + 'px'; }
+            });
+
+            const badge = document.getElementById('cropBadge');
+            badge.style.left = (cropX1 + cropW/2) + 'px';
+            badge.style.top = (cropY1 - 26 * invZ) + 'px';
+            badge.style.transform = `translateX(-50%) scale(${badgeScale})`;
+            badge.style.transformOrigin = 'center top';
+            badge.textContent = `${Math.round(canvas.width - cropLeft - cropRight)} × ${Math.round(canvas.height - cropTop - cropBottom)} px`;
+        }
+
+        (function initCropDrag() {
+            const cropBox = document.getElementById('cropBox');
+            let dragInfo = null;
+
+            function startDrag(e) {
+                const target = e.target;
+                const handle = target.dataset.h;
+                if (!handle && target !== cropBox) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                dragInfo = {
+                    handle: handle || 'move',
+                    startX: e.touches ? e.touches[0].clientX : e.clientX,
+                    startY: e.touches ? e.touches[0].clientY : e.clientY,
+                    origLeft: cropLeft, origRight: cropRight,
+                    origTop: cropTop, origBottom: cropBottom
+                };
+                document.addEventListener('mousemove', doDrag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchmove', doDrag, { passive: false });
+                document.addEventListener('touchend', stopDrag);
+            }
+
+            function doDrag(e) {
+                if (!dragInfo) return;
+                e.preventDefault();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = (clientX - dragInfo.startX) / zoom;
+                const dy = (clientY - dragInfo.startY) / zoom;
+
+                let { origLeft, origRight, origTop, origBottom } = dragInfo;
+                let L = origLeft, R = origRight, T = origTop, B = origBottom;
+                const minSize = 20;
+                const h = dragInfo.handle;
+
+                if (h === 'move') {
+                    L = origLeft + dx; R = origRight - dx;
+                    T = origTop + dy; B = origBottom - dy;
+                    if (L < 0) { const o = -L; L = 0; R -= o; }
+                    if (R < 0) { const o = -R; R = 0; L -= o; }
+                    if (T < 0) { const o = -T; T = 0; B -= o; }
+                    if (B < 0) { const o = -B; B = 0; T -= o; }
+                    L = Math.max(0, L); R = Math.max(0, R);
+                    T = Math.max(0, T); B = Math.max(0, B);
+                } else {
+                    if (h.includes('w')) L = origLeft + dx;
+                    if (h.includes('e')) R = origRight - dx;
+                    if (h.includes('n')) T = origTop + dy;
+                    if (h.includes('s')) B = origBottom - dy;
+                    L = Math.max(0, L); R = Math.max(0, R);
+                    T = Math.max(0, T); B = Math.max(0, B);
+                    if (canvas.width - L - R < minSize) {
+                        if (h.includes('w')) L = canvas.width - R - minSize;
+                        if (h.includes('e')) R = canvas.width - L - minSize;
+                    }
+                    if (canvas.height - T - B < minSize) {
+                        if (h.includes('n')) T = canvas.height - B - minSize;
+                        if (h.includes('s')) B = canvas.height - T - minSize;
+                    }
+                }
+
+                cropLeft = Math.round(L); cropRight = Math.round(R);
+                cropTop = Math.round(T); cropBottom = Math.round(B);
+
+                document.getElementById('cropLeft').value = cropLeft;
+                document.getElementById('cropRight').value = cropRight;
+                document.getElementById('cropTop').value = cropTop;
+                document.getElementById('cropBottom').value = cropBottom;
+                document.getElementById('cropLeftVal').value = cropLeft;
+                document.getElementById('cropRightVal').value = cropRight;
+                document.getElementById('cropTopVal').value = cropTop;
+                document.getElementById('cropBottomVal').value = cropBottom;
+                updateCropOverlay();
+            }
+
+            function stopDrag() {
+                dragInfo = null;
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchmove', doDrag);
+                document.removeEventListener('touchend', stopDrag);
+            }
+
+            cropBox.addEventListener('mousedown', startDrag);
+            cropBox.addEventListener('touchstart', startDrag, { passive: false });
+            cropBox.querySelectorAll('.crop-handle').forEach(h => {
+                h.addEventListener('mousedown', startDrag);
+                h.addEventListener('touchstart', startDrag, { passive: false });
+            });
+        })();
+
+        function applyCropPreview() { updateCropOverlay(); }
+
+        window.addEventListener('resize', () => {
+            updateSplitOverlayPosition();
+            updateCropOverlay();
+        });
+
+        (function initSplitDrag() {
+            const splitHandle = document.getElementById('splitHandle');
+            const splitLine = document.getElementById('splitLine');
+            let dragging = false;
+
+            function startDrag(e) { dragging = true; e.preventDefault(); e.stopPropagation(); }
+
+            function doDrag(e) {
+                if (!dragging || !originalImageData) return;
+                e.preventDefault();
+                const rect = canvasContainer.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const localX = (clientX - rect.left - panX) / zoom;
+                const localY = (clientY - rect.top - panY) / zoom;
+
+                if (splitDirection === 'vertical') {
+                    const fraction = Math.max(0, Math.min(1, localX / canvas.width));
+                    splitPosition = fraction; splitOffset = 0;
+                    document.getElementById('splitPositionSlider').value = fraction * 100;
+                    document.getElementById('splitPositionValue').value = (fraction * 100).toFixed(1);
+                    document.getElementById('splitOffsetSlider').value = 0;
+                    document.getElementById('splitOffsetValue').value = 0;
+                } else {
+                    const fraction = Math.max(0, Math.min(1, localY / canvas.height));
+                    splitPosition = fraction; splitOffset = 0;
+                    document.getElementById('splitPositionSlider').value = fraction * 100;
+                    document.getElementById('splitPositionValue').value = (fraction * 100).toFixed(1);
+                    document.getElementById('splitOffsetSlider').value = 0;
+                    document.getElementById('splitOffsetValue').value = 0;
+                }
+                updateSplitOverlayPosition();
+            }
+
+            function stopDrag() { dragging = false; }
+
+            splitHandle.addEventListener('mousedown', startDrag);
+            splitLine.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
+            splitHandle.addEventListener('touchstart', startDrag, { passive: false });
+            splitLine.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', doDrag, { passive: false });
+            document.addEventListener('touchend', stopDrag);
+        })();
+
+        // ============ PER-PAGE SETTINGS ============
+        function saveSplitSettingsForPage(pageNum) {
+            pageSplitSettings[pageNum] = { enabled: splitEnabled, direction: splitDirection, position: splitPosition, offset: splitOffset };
+        }
+        function loadSplitSettingsForPage(pageNum) {
+            const s = pageSplitSettings[pageNum];
+            if (s) {
+                splitEnabled = s.enabled; splitDirection = s.direction;
+                splitPosition = s.position; splitOffset = s.offset;
+            } else {
+                splitEnabled = false; splitDirection = 'vertical';
+                splitPosition = 0.5; splitOffset = 0;
+            }
+            document.getElementById('splitToggle').checked = splitEnabled;
+            document.getElementById('splitSettings').classList.toggle('hidden', !splitEnabled);
+            document.getElementById('splitOverlay').classList.toggle('active', splitEnabled);
+            document.getElementById('splitPositionSlider').value = splitPosition * 100;
+            document.getElementById('splitPositionValue').value = (splitPosition * 100).toFixed(1);
+            document.getElementById('splitOffsetSlider').value = splitOffset;
+            document.getElementById('splitOffsetValue').value = splitOffset;
+            document.getElementById('splitVerticalBtn').classList.toggle('active', splitDirection === 'vertical');
+            document.getElementById('splitHorizontalBtn').classList.toggle('active', splitDirection === 'horizontal');
+            const splitLine = document.getElementById('splitLine');
+            const splitBadge = document.getElementById('splitBadge');
+            splitLine.classList.remove('vertical', 'horizontal');
+            splitLine.classList.add(splitDirection);
+            splitBadge.classList.remove('top', 'left');
+            splitBadge.classList.add(splitDirection === 'vertical' ? 'top' : 'left');
+        }
+        function saveCropSettingsForPage(pageNum) {
+            pageCropSettings[pageNum] = {
+                enabled: cropEnabled, left: cropLeft, right: cropRight, top: cropTop, bottom: cropBottom
+            };
+        }
+        function loadCropSettingsForPage(pageNum) {
+            const s = pageCropSettings[pageNum];
+            if (s) {
+                cropEnabled = s.enabled; cropLeft = s.left; cropRight = s.right;
+                cropTop = s.top; cropBottom = s.bottom;
+            } else {
+                cropEnabled = false; cropLeft = 0; cropRight = 0; cropTop = 0; cropBottom = 0;
+            }
+            document.getElementById('cropToggle').checked = cropEnabled;
+            document.getElementById('cropSettings').classList.toggle('hidden', !cropEnabled);
+            document.getElementById('cropOverlay').classList.toggle('active', cropEnabled);
+            refreshCropSliderMaxes();
+            document.getElementById('cropLeft').value = cropLeft;
+            document.getElementById('cropRight').value = cropRight;
+            document.getElementById('cropTop').value = cropTop;
+            document.getElementById('cropBottom').value = cropBottom;
+            document.getElementById('cropLeftVal').value = cropLeft;
+            document.getElementById('cropRightVal').value = cropRight;
+            document.getElementById('cropTopVal').value = cropTop;
+            document.getElementById('cropBottomVal').value = cropBottom;
+        }
+
+        function setFitMode(mode) {
+            fitMode = mode;
+            document.getElementById('fitModeValue').textContent = mode === 'height' ? 'height' : 'width';
+            if (mode === 'height') {
+                document.getElementById('fitHeightBtn').style.background = '#7851A9';
+                document.getElementById('fitHeightBtn').style.color = 'white';
+                document.getElementById('fitWidthBtn').style.background = '#1f1f1f';
+                document.getElementById('fitWidthBtn').style.color = '#ddd';
+            } else {
+                document.getElementById('fitWidthBtn').style.background = '#7851A9';
+                document.getElementById('fitWidthBtn').style.color = 'white';
+                document.getElementById('fitHeightBtn').style.background = '#1f1f1f';
+                document.getElementById('fitHeightBtn').style.color = '#ddd';
+            }
+        }
+        function updateOrientation() {
+            const radios = document.getElementsByName('orientation');
+            for (let radio of radios) if (radio.checked) { currentOrientation = radio.value; break; }
+        }
+
+        // ============ FILE LOADING ============
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            if (files.length === 1 && files[0].type === 'application/pdf') await loadPDF(files[0]);
+            else await loadMultipleImages(files);
+        });
+
+        async function loadPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPages = pdfDoc.numPages;
+            pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
+            isMultiImageMode = false; imageFiles = [];
+            document.getElementById('pageNavigation').style.display = 'flex';
+            document.getElementById('pageStatus').style.display = 'block';
+            await loadPDFPage(1);
+        }
+
+        async function loadMultipleImages(files) {
+            const imageOnlyFiles = files.filter(f => f.type.startsWith('image/'));
+            if (imageOnlyFiles.length === 0) { alert('Please select image files'); return; }
+            isMultiImageMode = true; pdfDoc = null;
+            imageFiles = imageOnlyFiles; totalPages = imageOnlyFiles.length;
+            pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
+            document.getElementById('pageNavigation').style.display = 'flex';
+            document.getElementById('pageStatus').style.display = 'block';
+            for (let i = 0; i < imageOnlyFiles.length; i++) {
+                pdfPages[i + 1] = await loadImageToData(imageOnlyFiles[i]);
+            }
+            await loadImagePage(1);
+        }
+
+        function loadImageToData(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = img.width; tempCanvas.height = img.height;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.drawImage(img, 0, 0);
+                        resolve(tempCtx.getImageData(0, 0, img.width, img.height));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function loadImagePage(pageNum) {
+            const imageData = pdfPages[pageNum];
+            if (!imageData) return;
+            canvas.width = imageData.width;
+            canvas.height = imageData.height;
+            if (editedPages[pageNum]) {
+                ctx.putImageData(editedPages[pageNum], 0, 0);
+                currentImageData = editedPages[pageNum];
+                originalImageData = pdfPages[pageNum];
+            } else {
+                originalImageData = pdfPages[pageNum];
+                ctx.putImageData(originalImageData, 0, 0);
+                currentImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), canvas.width, canvas.height);
+            }
+            currentPage = pageNum;
+            loadSplitSettingsForPage(pageNum);
+            loadCropSettingsForPage(pageNum);
+            updatePageInfo(); updateHistogram(); updatePageStatus();
+            clearSelection();
+            requestAnimationFrame(() => {
+                fitToContainer();
+                updateSplitOverlayPosition();
+                updateCropOverlay();
+            });
+        }
+
+        async function loadPDFPage(pageNum) {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewportPdf = page.getViewport({ scale: 1.5 });
+            canvas.width = viewportPdf.width;
+            canvas.height = viewportPdf.height;
+            const renderContext = { canvasContext: ctx, viewport: viewportPdf };
+            await page.render(renderContext).promise;
+            if (!pdfPages[pageNum]) {
+                pdfPages[pageNum] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            }
+            if (editedPages[pageNum]) {
+                ctx.putImageData(editedPages[pageNum], 0, 0);
+                currentImageData = editedPages[pageNum];
+                originalImageData = pdfPages[pageNum];
+            } else {
+                originalImageData = pdfPages[pageNum];
+                currentImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), canvas.width, canvas.height);
+            }
+            currentPage = pageNum;
+            loadSplitSettingsForPage(pageNum);
+            loadCropSettingsForPage(pageNum);
+            updatePageInfo(); updateHistogram(); updatePageStatus();
+            clearSelection();
+            requestAnimationFrame(() => {
+                fitToContainer();
+                updateSplitOverlayPosition();
+                updateCropOverlay();
+            });
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                saveCurrentPageEdits();
+                saveSplitSettingsForPage(currentPage);
+                saveCropSettingsForPage(currentPage);
+                if (isMultiImageMode) loadImagePage(currentPage - 1);
+                else loadPDFPage(currentPage - 1);
+            }
+        }
+        function nextPage() {
+            if (currentPage < totalPages) {
+                saveCurrentPageEdits();
+                saveSplitSettingsForPage(currentPage);
+                saveCropSettingsForPage(currentPage);
+                if (isMultiImageMode) loadImagePage(currentPage + 1);
+                else loadPDFPage(currentPage + 1);
+            }
+        }
+
+        function saveCurrentPageEdits() {
+            if (originalImageData && currentImageData) {
+                const isModified = !arraysEqual(currentImageData.data, originalImageData.data);
+                if (isModified) {
+                    editedPages[currentPage] = new ImageData(
+                        new Uint8ClampedArray(currentImageData.data),
+                        canvas.width, canvas.height
+                    );
+                }
+            }
+        }
+        function arraysEqual(a, b) {
+            if (a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+            return true;
+        }
+        function updatePageInfo() {
+            document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+        }
+        function updatePageStatus() {
+            if (pdfDoc || isMultiImageMode) {
+                const editedCount = Object.keys(editedPages).length;
+                const modeText = isMultiImageMode ? 'images' : 'pages';
+                document.getElementById('pageStatus').textContent = `📝 ${editedCount} of ${totalPages} ${modeText} edited`;
+            }
+        }
+
+        // ============ CANVAS CLICK: PICK COLOR ============
+        canvas.addEventListener('click', (e) => {
+            if (!originalImageData) return;
+            if (e.target !== canvas) return;
+            if (selectionLocked) return;
+            if (panMoved) { panMoved = false; return; }
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+            if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                const index = (y * canvas.width + x) * 4;
+                const color = {
+                    r: originalImageData.data[index],
+                    g: originalImageData.data[index + 1],
+                    b: originalImageData.data[index + 2]
+                };
+                selectedColor = color;
+                document.getElementById('colorPreview').style.backgroundColor =
+                    `rgb(${color.r}, ${color.g}, ${color.b})`;
+                if (clickMode === 'single') {
+                    selectedColors = [{ ...color }];
+                } else {
+                    if (selectedColors.length >= MAX_COLORS) selectedColors.shift();
+                    selectedColors.push({ ...color });
+                }
+                hasSelectedColor = true;
+                computeSelectionMask();
+                visualizeSelection();
+                isSelectionActive = true;
+                updateSelectedCount(countNonZero(selectionMask));
+                updateColorHint();
+            }
+        });
+		
+		function toggleSelection(){
+			if(toggleSel == 0){
+				livePreviewSelection();
+			}
+			else{
+				livePreviewLevels();
+			}
+		}
+		
+        function applyColorSelection() {
+			if (!originalImageData) return;
+			if (!hasSelectedColor) return;
+			if (selectionLocked && lockedBaseMask) recomputeFromLocked();
+			else computeSelectionMask();
+			visualizeSelection();
+			isSelectionActive = true;
+			updateSelectedCount(countNonZero(selectionMask));
+        }
+
+        function expandMask(mask, expandAmount, width, height) {
+            const newMask = new Uint8Array(mask.length);
+            for (let i = 0; i < mask.length; i++) newMask[i] = mask[i];
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const index = y * width + x;
+                    if (mask[index] > 0) {
+                        for (let dy = -expandAmount; dy <= expandAmount; dy++) {
+                            for (let dx = -expandAmount; dx <= expandAmount; dx++) {
+                                const nx = x + dx, ny = y + dy;
+                                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                    const nIndex = ny * width + nx;
+                                    const distance = Math.sqrt(dx*dx + dy*dy);
+                                    if (distance <= expandAmount) newMask[nIndex] = 255;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return newMask;
+        }
+
+        function visualizeSelection() {
+            if (!originalImageData || !selectionMask) return;
+            const width = canvas.width, height = canvas.height;
+            const displayData = new ImageData(new Uint8ClampedArray(originalImageData.data), width, height);
+            for (let i = 0; i < selectionMask.length; i++) {
+                const alpha = selectionMask[i];
+                if (alpha > 0) {
+                    const pixelIndex = i * 4;
+                    displayData.data[pixelIndex] = Math.min(255, displayData.data[pixelIndex] + alpha/2);
+                    displayData.data[pixelIndex + 1] = Math.max(0, displayData.data[pixelIndex + 1] - alpha/4);
+                    displayData.data[pixelIndex + 2] = Math.max(0, displayData.data[pixelIndex + 2] - alpha/4);
+                }
+            }
+            ctx.putImageData(displayData, 0, 0);
+            currentImageData = displayData;
+        }
+
+        function applyLevelsToCanvas() {
+            if (!originalImageData) return;
+            const shadows = parseInt(document.getElementById('shadows').value);
+            const gamma = parseFloat(document.getElementById('midtones').value);
+            const highlights = parseInt(document.getElementById('highlights').value);
+            const width = canvas.width, height = canvas.height;
+            const lut = new Uint8ClampedArray(256);
+            for (let v = 0; v < 256; v++) {
+                let value = (v - shadows) * (255 / (highlights - shadows));
+                value = Math.max(0, Math.min(255, value));
+                value = 255 * Math.pow(value / 255, 1 / gamma);
+                lut[v] = Math.round(Math.max(0, Math.min(255, value)));
+            }
+            const resultData = new ImageData(new Uint8ClampedArray(originalImageData.data), width, height);
+            for (let i = 0; i < resultData.data.length; i += 4) {
+                const maskIndex = i / 4;
+                let maskAlpha = 1;
+                if (isSelectionActive && selectionMask) maskAlpha = selectionMask[maskIndex] / 255;
+                for (let j = 0; j < 3; j++) {
+                    const originalValue = originalImageData.data[i + j];
+                    const newValue = lut[originalValue];
+                    resultData.data[i + j] = Math.round(originalValue * (1 - maskAlpha) + newValue * maskAlpha);
+                }
+            }
+            ctx.putImageData(resultData, 0, 0);
+            currentImageData = resultData;
+        }
+
+        function applyLevels() {
+            applyLevelsToCanvas();
+            if (pdfDoc || isMultiImageMode) {
+                editedPages[currentPage] = new ImageData(
+                    new Uint8ClampedArray(currentImageData.data), canvas.width, canvas.height
+                );
+                updatePageStatus();
+            }
+            updateHistogram();
+        }
+
+        function applyEditToCurrentPage() {
+            if (!originalImageData) { alert('Please load an image or PDF first'); return; }
+            if (!hasSelectedColor) { alert('Please select a color first'); return; }
+            if (selectionLocked && lockedBaseMask) recomputeFromLocked();
+            else computeSelectionMask();
+            isSelectionActive = true;
+            applyLevels();
+            saveSplitSettingsForPage(currentPage);
+            saveCropSettingsForPage(currentPage);
+            alert('Edit applied to current page');
+        }
+
+        function applyEditToAllPages() {
+            if (!pdfDoc && !isMultiImageMode) { applyEditToCurrentPage(); return; }
+            if (!hasSelectedColor) { alert('Please select a color first'); return; }
+
+            const tolerance = parseInt(document.getElementById('tolerance').value);
+            const fuzziness = parseInt(document.getElementById('fuzziness').value);
+            const expandAmount = parseInt(document.getElementById('expandAmount').value);
+            const shadows = parseInt(document.getElementById('shadows').value);
+            const gamma = parseFloat(document.getElementById('midtones').value);
+            const highlights = parseInt(document.getElementById('highlights').value);
+
+            const currentSplitSettings = {
+                enabled: splitEnabled, direction: splitDirection,
+                position: splitPosition, offset: splitOffset
+            };
+            const currentCropSettings = {
+                enabled: cropEnabled, left: cropLeft, right: cropRight,
+                top: cropTop, bottom: cropBottom
+            };
+
+            const colorsForPages = selectedColors.map(c => {
+                if (selectionLocked && c.tolerance !== undefined) return { ...c };
+                return { r: c.r, g: c.g, b: c.b, tolerance, fuzziness };
+            });
+
+            const itemType = isMultiImageMode ? 'images' : 'pages';
+            const splitNote = splitEnabled ? ' (with split)' : '';
+            const cropNote = cropEnabled ? ' (with crop)' : '';
+
+            if (confirm(`Apply current edit${splitNote}${cropNote} to all ${totalPages} ${itemType}?`)) {
+                if (selectionLocked && lockedBaseMask) recomputeFromLocked();
+                else computeSelectionMask();
+                isSelectionActive = true;
+                applyLevels();
+                saveCurrentPageEdits();
+                saveSplitSettingsForPage(currentPage);
+                saveCropSettingsForPage(currentPage);
+
+                for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    if (pageNum !== currentPage && pdfPages[pageNum]) {
+                        let pageMask = createSelectionMaskMulti(pdfPages[pageNum], colorsForPages);
+                        if (expandAmount > 0) {
+                            pageMask = expandMask(pageMask, expandAmount, pdfPages[pageNum].width, pdfPages[pageNum].height);
+                        }
+                        applyLevelsToPage(pageNum, shadows, gamma, highlights, pageMask);
+                    }
+                    if (pageNum !== currentPage) {
+                        pageSplitSettings[pageNum] = { ...currentSplitSettings };
+                        pageCropSettings[pageNum] = { ...currentCropSettings };
+                    }
+                }
+
+                if (isMultiImageMode) loadImagePage(currentPage).then(() => alert(`Edit applied to all ${itemType}!`));
+                else loadPDFPage(currentPage).then(() => alert(`Edit applied to all ${itemType}!`));
+            }
+        }
+
+        function createSelectionMaskMulti(imageData, colors) {
+            const width = imageData.width, height = imageData.height;
+            const mask = new Uint8Array(width * height);
+            for (const color of colors) {
+                const tol = color.tolerance !== undefined ? color.tolerance : 0;
+                const fz = color.fuzziness !== undefined ? color.fuzziness : 0;
+                for (let i = 0; i < mask.length; i++) {
+                    const pixelIndex = i * 4;
+                    const r = imageData.data[pixelIndex];
+                    const g = imageData.data[pixelIndex + 1];
+                    const b = imageData.data[pixelIndex + 2];
+                    const dr = r - color.r, dg = g - color.g, db = b - color.b;
+                    const difference = Math.sqrt(0.299 * dr * dr + 0.587 * dg * dg + 0.114 * db * db);
+                    let v = 0;
+                    if (difference <= tol) v = 255;
+                    else if (difference <= tol + fz) {
+                        const softness = 1 - (difference - tol) / fz;
+                        v = Math.floor(softness * 255);
+                    }
+                    if (v > mask[i]) mask[i] = v;
+                }
+            }
+            return mask;
+        }
+
+        function applyLevelsToPage(pageNum, shadows, gamma, highlights, mask) {
+            const pageData = pdfPages[pageNum];
+            if (!pageData) return;
+            const width = pageData.width, height = pageData.height;
+            const lut = new Uint8ClampedArray(256);
+            for (let v = 0; v < 256; v++) {
+                let value = (v - shadows) * (255 / (highlights - shadows));
+                value = Math.max(0, Math.min(255, value));
+                value = 255 * Math.pow(value / 255, 1 / gamma);
+                lut[v] = Math.round(Math.max(0, Math.min(255, value)));
+            }
+            const resultData = new ImageData(new Uint8ClampedArray(pageData.data), width, height);
+            for (let i = 0; i < resultData.data.length; i += 4) {
+                const maskIndex = i / 4;
+                const maskAlpha = mask ? mask[maskIndex] / 255 : 1;
+                for (let j = 0; j < 3; j++) {
+                    const originalValue = pageData.data[i + j];
+                    const newValue = lut[originalValue];
+                    resultData.data[i + j] = Math.round(originalValue * (1 - maskAlpha) + newValue * maskAlpha);
+                }
+            }
+            editedPages[pageNum] = resultData;
+        }
+
+        function updateHistogram() {
+            if (!currentImageData) return;
+            histCtx.fillStyle = '#1a1a1a';
+            histCtx.fillRect(0, 0, histogramCanvas.width, histogramCanvas.height);
+            const histogram = new Array(256).fill(0);
+            const data = currentImageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const luminance = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                histogram[luminance]++;
+            }
+            let max = 0;
+            for (let i = 0; i < 256; i++) if (histogram[i] > max) max = histogram[i];
+            if (max === 0) max = 1;
+            histCtx.fillStyle = '#7851A9';
+            const barWidth = histogramCanvas.width / 256;
+            for (let i = 0; i < 256; i++) {
+                const height = (histogram[i] / max) * histogramCanvas.height;
+                histCtx.fillRect(i * barWidth, histogramCanvas.height - height, Math.max(1, barWidth - 0.5), height);
+            }
+        }
+
+        function resetImage() {
+            if (originalImageData) {
+                ctx.putImageData(originalImageData, 0, 0);
+                currentImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), canvas.width, canvas.height);
+                selectionMask = null;
+                isSelectionActive = false;
+                lockedBaseMask = null;
+                if ((pdfDoc || isMultiImageMode) && editedPages[currentPage]) {
+                    delete editedPages[currentPage];
+                    updatePageStatus();
+                }
+                resetLevels();
+                updateHistogram();
+                updateSelectedCount(0);
+            }
+        }
+
+        function resetAllPages() {
+            if (!pdfDoc && !isMultiImageMode) { resetImage(); return; }
+            const itemType = isMultiImageMode ? 'images' : 'pages';
+            if (confirm(`Reset all ${totalPages} ${itemType}?`)) {
+                editedPages = {};
+                pageSplitSettings = {};
+                pageCropSettings = {};
+                if (isMultiImageMode) loadImagePage(currentPage);
+                else loadPDFPage(currentPage);
+                updatePageStatus();
+            }
+        }
+
+        function resetLevels() {
+            document.getElementById('shadows').value = 0;
+            document.getElementById('midtones').value = 1.0;
+            document.getElementById('highlights').value = 255;
+            document.getElementById('shadowsValue').value = 0;
+            document.getElementById('midtonesValue').value = 1.0;
+            document.getElementById('highlightsValue').value = 255;
+            if (originalImageData) {
+                if (isSelectionActive && selectionMask) {
+                    visualizeSelection();
+                } else {
+                    ctx.putImageData(originalImageData, 0, 0);
+                    currentImageData = new ImageData(new Uint8ClampedArray(originalImageData.data), canvas.width, canvas.height);
+                }
+                updateHistogram();
+            }
+        }
+
+        // ============ OUTPUT (crop + split) ============
+        function getPageOutputs(pageNum) {
+            const splitSettings = pageSplitSettings[pageNum];
+            const cropSettings = pageCropSettings[pageNum];
+            const pageData = editedPages[pageNum] || pdfPages[pageNum];
+            if (!pageData) return [];
+
+            let workingData = pageData;
+            if (cropSettings && cropSettings.enabled) {
+                const L = Math.max(0, Math.min(cropSettings.left, pageData.width - 1));
+                const R = Math.max(0, Math.min(cropSettings.right, pageData.width - L - 1));
+                const T = Math.max(0, Math.min(cropSettings.top, pageData.height - 1));
+                const B = Math.max(0, Math.min(cropSettings.bottom, pageData.height - T - 1));
+                const newW = pageData.width - L - R;
+                const newH = pageData.height - T - B;
+                if (newW > 0 && newH > 0) {
+                    const cropped = new ImageData(newW, newH);
+                    for (let y = 0; y < newH; y++) {
+                        for (let x = 0; x < newW; x++) {
+                            const srcIdx = ((y + T) * pageData.width + (x + L)) * 4;
+                            const dstIdx = (y * newW + x) * 4;
+                            cropped.data[dstIdx] = pageData.data[srcIdx];
+                            cropped.data[dstIdx + 1] = pageData.data[srcIdx + 1];
+                            cropped.data[dstIdx + 2] = pageData.data[srcIdx + 2];
+                            cropped.data[dstIdx + 3] = pageData.data[srcIdx + 3];
+                        }
+                    }
+                    workingData = cropped;
+                }
+            }
+
+            if (!splitSettings || !splitSettings.enabled) {
+                return [{ data: workingData, label: 'full' }];
+            }
+
+            const w = workingData.width, h = workingData.height;
+            const halves = [];
+
+            if (splitSettings.direction === 'vertical') {
+                let cutX = Math.round(w * splitSettings.position + splitSettings.offset);
+                cutX = Math.max(0, Math.min(w, cutX));
+                const leftW = cutX, rightW = w - cutX;
+                if (leftW > 0) {
+                    const leftData = new ImageData(leftW, h);
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < leftW; x++) {
+                            const s = (y * w + x) * 4, d = (y * leftW + x) * 4;
+                            leftData.data[d] = workingData.data[s];
+                            leftData.data[d+1] = workingData.data[s+1];
+                            leftData.data[d+2] = workingData.data[s+2];
+                            leftData.data[d+3] = workingData.data[s+3];
+                        }
+                    }
+                    halves.push({ data: leftData, label: 'left' });
+                }
+                if (rightW > 0) {
+                    const rightData = new ImageData(rightW, h);
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < rightW; x++) {
+                            const s = (y * w + (x + cutX)) * 4, d = (y * rightW + x) * 4;
+                            rightData.data[d] = workingData.data[s];
+                            rightData.data[d+1] = workingData.data[s+1];
+                            rightData.data[d+2] = workingData.data[s+2];
+                            rightData.data[d+3] = workingData.data[s+3];
+                        }
+                    }
+                    halves.push({ data: rightData, label: 'right' });
+                }
+            } else {
+                let cutY = Math.round(h * splitSettings.position + splitSettings.offset);
+                cutY = Math.max(0, Math.min(h, cutY));
+                const topH = cutY, bottomH = h - cutY;
+                if (topH > 0) {
+                    const topData = new ImageData(w, topH);
+                    for (let y = 0; y < topH; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const s = (y * w + x) * 4, d = (y * w + x) * 4;
+                            topData.data[d] = workingData.data[s];
+                            topData.data[d+1] = workingData.data[s+1];
+                            topData.data[d+2] = workingData.data[s+2];
+                            topData.data[d+3] = workingData.data[s+3];
+                        }
+                    }
+                    halves.push({ data: topData, label: 'top' });
+                }
+                if (bottomH > 0) {
+                    const bottomData = new ImageData(w, bottomH);
+                    for (let y = 0; y < bottomH; y++) {
+                        for (let x = 0; x < w; x++) {
+                            const s = ((y + cutY) * w + x) * 4, d = (y * w + x) * 4;
+                            bottomData.data[d] = workingData.data[s];
+                            bottomData.data[d+1] = workingData.data[s+1];
+                            bottomData.data[d+2] = workingData.data[s+2];
+                            bottomData.data[d+3] = workingData.data[s+3];
+                        }
+                    }
+                    halves.push({ data: bottomData, label: 'bottom' });
+                }
+            }
+            return halves;
+        }
+
+        // ============ EXPORT ============
+        function showExportModal(type) {
+            exportType = type;
+            const modal = document.getElementById('exportModal');
+            document.getElementById('modalTitle').textContent = type === 'images' ? 'export images' : 'export pdf';
+            if (pdfDoc || isMultiImageMode) {
+                const itemType = isMultiImageMode ? 'images' : 'pages';
+                document.getElementById('modalMessage').textContent =
+                    `${Object.keys(editedPages).length} of ${totalPages} ${itemType} edited`;
+                const splitCount = Object.values(pageSplitSettings).filter(s => s.enabled).length;
+                const cropCount = Object.values(pageCropSettings).filter(s => s.enabled).length;
+                let notes = '';
+                if (splitCount > 0) notes += `<div style="color:#9A6BBE; font-size:0.7rem; margin-top:4px;">✂️ ${splitCount} page(s) will be split</div>`;
+                if (cropCount > 0) notes += `<div style="color:#fada5e; font-size:0.7rem; margin-top:4px;">🔲 ${cropCount} page(s) will be cropped</div>`;
+                let optionsHtml = `
+                    <div style="margin: 10px 0; color: #ccc; font-size: 0.8rem;">
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="exportRange" value="current" checked> current ${isMultiImageMode ? 'image' : 'page'}
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="exportRange" value="all"> all ${itemType}
+                        </label>
+                        <label style="display: block; margin-bottom: 5px;">
+                            <input type="radio" name="exportRange" value="edited"> edited only
+                        </label>
+                        ${notes}
+                    </div>
+                `;
+                document.getElementById('modalOptions').innerHTML = optionsHtml;
+            } else {
+                document.getElementById('modalMessage').textContent = 'export current image?';
+                document.getElementById('modalOptions').innerHTML = '';
+            }
+            modal.style.display = 'block';
+        }
+
+        function closeModal() { document.getElementById('exportModal').style.display = 'none'; }
+
+        async function confirmExport() {
+            closeModal();
+            if (exportType === 'images') await exportAsImages();
+        }
+
+        async function exportAsImages() {
+            const quality = parseInt(document.getElementById('exportQuality').value) / 100;
+            if (pdfDoc || isMultiImageMode) {
+                const range = document.querySelector('input[name="exportRange"]:checked').value;
+                let pagesToExport = [];
+                if (range === 'current') pagesToExport = [currentPage];
+                else if (range === 'all') pagesToExport = Array.from({ length: totalPages }, (_, i) => i + 1);
+                else if (range === 'edited') pagesToExport = Object.keys(editedPages).map(Number).sort();
+                saveSplitSettingsForPage(currentPage);
+                saveCropSettingsForPage(currentPage);
+                for (const pageNum of pagesToExport) {
+                    const outputs = getPageOutputs(pageNum);
+                    const isSplit = pageSplitSettings[pageNum] && pageSplitSettings[pageNum].enabled && outputs.length === 2;
+                    for (let i = 0; i < outputs.length; i++) {
+                        const out = outputs[i];
+                        const exportCanvas = document.createElement('canvas');
+                        exportCanvas.width = out.data.width;
+                        exportCanvas.height = out.data.height;
+                        const exportCtx = exportCanvas.getContext('2d');
+                        exportCtx.putImageData(out.data, 0, 0);
+                        const suffix = isSplit ? `_${out.label}` : '';
+                        const filename = `page_${pageNum}${suffix}.png`;
+                        const link = document.createElement('a');
+                        if (quality < 1.0) {
+                            link.download = filename.replace('.png', '.jpg');
+                            link.href = exportCanvas.toDataURL('image/jpeg', quality);
+                        } else {
+                            link.download = filename;
+                            link.href = exportCanvas.toDataURL('image/png');
+                        }
+                        link.click();
+                        if (outputs.length > 1) await new Promise(r => setTimeout(r, 200));
+                    }
+                }
+            }
+        }
+
+        function exportWithPaperFormat() {
+            if (!pdfDoc && !isMultiImageMode && !originalImageData) {
+                alert('Please load a document first');
+                return;
+            }
+            const quality = parseInt(document.getElementById('exportQuality').value) / 100;
+            const format = document.getElementById('paperFormat').value;
+            const orientation = currentOrientation;
+            let paperWidth = paperFormats[format].width;
+            let paperHeight = paperFormats[format].height;
+            if (orientation === 'landscape') [paperWidth, paperHeight] = [paperHeight, paperWidth];
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation, unit: 'pt', format: [paperWidth, paperHeight] });
+            saveCurrentPageEdits();
+            saveSplitSettingsForPage(currentPage);
+            saveCropSettingsForPage(currentPage);
+            const outputPages = [];
+            if (!pdfDoc && !isMultiImageMode) {
+                outputPages.push({ data: currentImageData, width: canvas.width, height: canvas.height });
+            } else {
+                for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    const outputs = getPageOutputs(pageNum);
+                    for (const out of outputs) {
+                        outputPages.push({ data: out.data, width: out.data.width, height: out.data.height });
+                    }
+                }
+            }
+            let firstPage = true;
+            for (const out of outputPages) {
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = out.width;
+                pageCanvas.height = out.height;
+                const pageCtx = pageCanvas.getContext('2d');
+                pageCtx.putImageData(out.data, 0, 0);
+                let scale = fitMode === 'height' ? paperHeight / out.height : paperWidth / out.width;
+                const scaledWidth = out.width * scale;
+                const scaledHeight = out.height * scale;
+                const xOffset = (paperWidth - scaledWidth) / 2;
+                const yOffset = (paperHeight - scaledHeight) / 2;
+                if (!firstPage) pdf.addPage();
+                firstPage = false;
+                const imgData = pageCanvas.toDataURL('image/jpeg', quality);
+                pdf.addImage(imgData, 'JPEG', xOffset, yOffset, scaledWidth, scaledHeight);
+            }
+            pdf.save('editedpiece.pdf');
+        }
+    </script>
+</body>
+</html>
