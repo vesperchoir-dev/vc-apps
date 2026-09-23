@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piece Tools · Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .dashboard {
+      max-width: 1200px;
+      width: 100%;
+      background: #111111;
+      border: 1px solid #2a2a2a;
+      border-radius: 24px;
+      padding: 36px 40px 44px;
+      box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9);
+      transition: all 0.2s;
+    }
+
+    .dashboard-header {
+      margin-bottom: 36px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 24px;
+    }
+
+    .dashboard-header h1 {
+      font-size: 1.9rem;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .dashboard-header .subhead {
+      font-size: 0.9rem;
+      color: #888888;
+      font-weight: 400;
+      margin-top: 4px;
+    }
+
+    .version-badge {
+      font-size: 0.7rem;
+      background: #1f1f1f;
+      border: 1px solid #333;
+      color: #aaa;
+      padding: 6px 14px;
+      border-radius: 40px;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 18px;
+      padding: 26px 22px 22px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tool-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #7851A9, #9A6BBE, #667eea);
+      opacity: 0.6;
+      transition: opacity 0.25s;
+    }
+
+    .tool-card:hover {
+      border-color: #3f3f3f;
+      background: #1a1a1a;
+      transform: translateY(-4px);
+      box-shadow: 0 18px 36px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(120, 81, 169, 0.2);
+    }
+
+    .tool-card:hover::after {
+      opacity: 1;
+    }
+
+    .tool-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+      margin-bottom: 16px;
+      display: inline-block;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    }
+
+    .tool-name {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    .tool-desc {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #999999;
+      margin-bottom: 18px;
+      flex: 1;
+    }
+
+    .tool-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.7rem;
+      color: #666666;
+      border-top: 1px solid #262626;
+      padding-top: 16px;
+      margin-top: 6px;
+    }
+
+    .tool-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tool-meta .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #7851A9;
+      display: inline-block;
+    }
+
+    .tool-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #b8a0d4;
+      font-weight: 500;
+      font-size: 0.75rem;
+      margin-top: 4px;
+      transition: gap 0.2s;
+    }
+
+    .tool-card:hover .tool-link {
+      gap: 10px;
+      color: #c9b3e6;
+    }
+
+    .tool-link .arrow {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .footer-note {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid #202020;
+      font-size: 0.7rem;
+      color: #555555;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+
+    /* accent tints per card */
+    .tool-card.editor::after {
+      background: linear-gradient(90deg, #7851A9, #9A6BBE);
+    }
+    .tool-card.stamper::after {
+      background: linear-gradient(90deg, #667eea, #8898ff);
+    }
+    .tool-card.stacker::after {
+      background: linear-gradient(90deg, #f5a623, #fada5e);
+    }
+
+    .tool-card.editor .tool-icon { color: #b8a0d4; }
+    .tool-card.stamper .tool-icon { color: #8898ff; }
+    .tool-card.stacker .tool-icon { color: #f5a623; }
+
+    @media (max-width: 700px) {
+      .dashboard { padding: 24px 18px 30px; }
+      .dashboard-header h1 { font-size: 1.5rem; }
+      .tool-grid { gap: 14px; }
+      .tool-card { padding: 20px 16px 18px; }
+      .tool-icon { font-size: 1.8rem; }
+      .tool-name { font-size: 1.05rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <h1>Piece Tools</h1>
+        <div class="subhead">for VC custodians · edit, stamp & stack</div>
+      </div>
+      <div class="version-badge">v3</div>
+    </div>
+
+    <div class="tool-grid">
+      <!-- PIECE EDITOR -->
+      <a class="tool-card editor" href="pieceeditor.html">
+        <div class="tool-icon">🎨</div>
+        <div class="tool-name">Piece Editor</div>
+        <div class="tool-desc">
+          Piece splitting, cropping and watermark removal. <br>(For legal reasons: we do not condone piracy)
+        </div>
+        <div class="tool-meta">
+        </div>
+        <div class="tool-link">
+          Open editor <span class="arrow">→</span>
+        </div>
+      </a>
+
+      <!-- PIECE STAMPER -->
+      <a class="tool-card stamper" href="stamper.html">
+        <div class="tool-icon">🖨️</div>
+        <div class="tool-name">Piece Stamper</div>
+        <div class="tool-desc">
+          Stamp branding logo, signature, and watermark on pieces. Per-stamp scale & rotation variance.
+        </div>
+		<div class="tool-meta">
+        </div>
+        <div class="tool-link">
+          Open stamper <span class="arrow">→</span>
+        </div>
+      </a>
+
+      <!-- LETTER STACKER -->
+      <a class="tool-card stacker" href="photostacker.html">
+        <div class="tool-icon">📄</div>
+        <div class="tool-name">Stacker</div>
+        <div class="tool-desc">
+          Combine 2–4 images into a single letter or A4 page. Adjustable
+          vertical weights, zoom, offsets and fit modes.
+        </div>
+		<div class="tool-meta">
+        </div>
+        <div class="tool-link">
+          Open stacker <span class="arrow">→</span>
+        </div>
+      </a>
+    </div>
+
+    <div class="footer-note">
+      Tutorial here soon
+    </div>
+  </div>
+</body>
+</html>
