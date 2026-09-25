@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Piece Stacker v3</title>
+  <title>Piece Stacker v4</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
@@ -55,11 +55,11 @@
       overflow: hidden; padding: 12px;
     }
 
-    /* letter page */
+    /* letter page – now scales to fill available height while preserving aspect */
     .page-composer {
       position: relative; background: #ffffff;
       box-shadow: 0 8px 24px rgba(0,0,0,0.6); border-radius: 2px;
-      width: 100%; height: 100%; max-width: 720px; max-height: 100%;
+      width: auto; height: 100%; max-width: 100%; max-height: 100%;
       aspect-ratio: 8.5 / 11; overflow: hidden;
       display: flex; flex-direction: column; transition: box-shadow 0.2s;
     }
@@ -75,13 +75,24 @@
       min-height: 0;
       background: #ffffff;
       transition: outline 0.15s, flex-grow 0.15s;
+      cursor: pointer;
     }
     .layer-slot.selected {
       outline: 2px solid var(--crop);
       outline-offset: -2px;
       z-index: 10;
     }
-    .layer-slot:hover:not(.selected) {
+    .layer-slot.multi-selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      z-index: 9;
+    }
+    .layer-slot.multi-selected.selected {
+      outline: 2px solid #ffaa33;
+      outline-offset: -2px;
+      z-index: 12;
+    }
+    .layer-slot:hover:not(.selected):not(.multi-selected) {
       outline: 2px solid var(--accent);
       outline-offset: -2px;
     }
@@ -145,6 +156,12 @@
       border-color: #fff;
       font-weight: 600;
     }
+    .layer-slot.multi-selected:not(.selected) .layer-index {
+      background: var(--accent);
+      color: #fff;
+      border-color: #fff;
+      font-weight: 600;
+    }
 
     .empty-layer {
       flex: 1; width: 100%; background: #1a1a1a; border: 1px dashed var(--border-strong);
@@ -157,7 +174,7 @@
       margin-top: 12px; align-items: center; flex-wrap: wrap;
     }
     .tools-panel {
-      width: 340px; flex-shrink: 0; display: flex; flex-direction: column;
+      width: 360px; flex-shrink: 0; display: flex; flex-direction: column;
       background: var(--bg-panel); border-radius: 12px; padding: 16px;
       border: 1px solid var(--border-subtle); overflow-y: auto; min-height: 0;
     }
@@ -249,6 +266,15 @@
       border-color: var(--crop);
       color: #fff;
     }
+    .layer-item.multi-selected {
+      background: rgba(102, 126, 234, 0.15);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .layer-item.multi-selected.selected {
+      background: rgba(245, 166, 35, 0.2);
+      border-color: #ffaa33;
+    }
     .layer-thumb {
       width: 28px; height: 28px; border-radius: 4px; object-fit: cover;
       border: 1px solid var(--border-default); background: #000; flex-shrink: 0;
@@ -262,6 +288,7 @@
       min-width: 16px; text-align: center;
     }
     .layer-item.selected .layer-num { color: var(--crop); }
+    .layer-item.multi-selected .layer-num { color: var(--accent-light); }
 
     .slider-group { margin-bottom: 10px; }
     .slider-header {
@@ -335,25 +362,47 @@
     .layer-actions button:hover:not(:disabled) { background: var(--bg-inset-hover); color: #fff; border-color: var(--border-strong); }
     .layer-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* weight badge */
     .weight-badge {
       font-size: 0.6rem; color: var(--text-faint);
       font-variant-numeric: tabular-nums;
       min-width: 34px; text-align: right;
     }
     .layer-item.selected .weight-badge { color: var(--crop); }
+    .layer-item.multi-selected .weight-badge { color: var(--accent-light); }
+
+    .undo-bar {
+      display: flex; gap: 6px; margin-top: 8px; align-items: center;
+      font-size: 0.65rem; color: var(--text-faint);
+    }
+    .undo-bar button {
+      background: var(--bg-inset); border: 1px solid var(--border-default);
+      color: var(--text-muted); padding: 4px 10px; border-radius: 6px;
+      font-size: 0.65rem; cursor: pointer; font-family: inherit;
+      transition: 0.15s;
+    }
+    .undo-bar button:hover:not(:disabled) { background: var(--bg-inset-hover); color: #fff; }
+    .undo-bar button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .multi-badge {
+      background: var(--accent); color: #fff; font-size: 0.6rem;
+      padding: 1px 8px; border-radius: 12px; margin-left: 6px;
+      display: none;
+    }
+    .multi-badge.visible { display: inline-block; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
       <div>
-        <h1>Piece Stacker</h1>
-        <div class="subtitle">Stack per bar of photos of pieces</div>
+        <h1>Piece Stacker <span style="font-size:0.7rem; color:var(--text-faint);">v4</span></h1>
+        <div class="subtitle">Stack per bar of photos</div>
+      </div>
+	  <div>
+		  <button class="btn" id="uploadBtn" style="padding: 9px 20px; font-size:0.8rem; display: inline-block;">
+			<span style="font-size: 0.6rem">📁</span> Open Files (2-4 images)
+		  </button>
+		  <button class="btn btn-secondary" id="clearBtn" style="padding: 9px 20px; font-size:0.8rem; display: inline-block;">Clear</button>
 	  </div>
-      <button class="btn" id="uploadBtn" style="padding: 10px 20px; font-size:0.8rem; display: inline-block; margin-right: 0px;">
-            <span>📁</span> Open Files (2-4 images)
-        </button>
     </div>
 
     <div class="main-content">
@@ -363,9 +412,8 @@
         </div>
 
         <div class="upload-btn">
-		  <div class="letter-badge" id="paperBadge">US Letter · 8.5 × 11 in</div>
+          <div class="letter-badge" id="paperBadge">US Letter · 8.5 × 11 in</div>
           <input type="file" id="fileInput" accept="image/*" multiple>
-          <button class="btn btn-secondary" id="clearBtn" style="padding: 10px 16px;">Clear</button>
         </div>
       </div>
 
@@ -373,46 +421,54 @@
         <!-- LAYER LIST -->
         <div class="section">
           <div class="section-header">
-            <h3>Layers</h3>
+            <h3>Layers <span id="multiCount" class="multi-badge">0</span></h3>
             <span class="image-count" id="layerCount">0</span>
           </div>
           <div class="info-text" style="margin-top:0; margin-bottom:8px;">
-            Click a layer, then drag it in the preview.
+            Click to select · Ctrl/Cmd+Click for multi‑select · Drag in preview.
           </div>
           <div class="layer-list" id="layerList"></div>
           <div class="action-mini" style="margin-top:10px;">
             <button class="btn" id="addImageBtn">＋ Add</button>
             <button class="btn" id="removeLastBtn">－ Remove last</button>
           </div>
+          <div class="undo-bar">
+            <button id="undoBtn" disabled>↶ Undo (Ctrl+Z)</button>
+            <button id="redoBtn" disabled>↷ Redo (Ctrl+Shift+Z)</button>
+            <span id="undoCount" style="margin-left:auto;">0 steps</span>
+          </div>
         </div>
 
         <!-- SELECTED LAYER CONTROLS -->
         <div class="section" id="adjustSection">
-          <h3>Adjust layer <span id="adjustLayerNum" style="color:var(--crop);">—</span></h3>
+          <h3>Adjust layer <span id="adjustLayerNum" style="color:var(--crop);">—</span>
+            <span id="adjustMultiBadge" class="multi-badge">multi</span>
+          </h3>
 
           <div id="noSelectionMsg" class="info-text" style="margin:0 0 8px 0;">
             Select a layer above to adjust its crop, position and size.
           </div>
 
           <div id="adjustControls" style="display:none;">
-            <!-- Vertical weight (share of page height) -->
+            <!-- Vertical weight – percentage based, shared -->
             <div class="slider-group">
               <div class="slider-header">
-                <label>Vertical weight</label>
-                <span class="value-display" id="weightVal">1.00</span>
+                <label>Vertical weight (%)</label>
+                <span class="value-display" id="weightVal">—</span>
               </div>
-              <input type="range" class="slider" id="weightSlider" min="10" max="400" value="100" step="5">
-              <div class="info-text" style="margin-top:4px;">Higher = taller slot. Neighbors shrink automatically.</div>
+              <input type="range" class="slider" id="weightSlider" min="10" max="500" value="100" step="1">
+              <div class="info-text" style="margin-top:4px;">
+                <span id="weightHint">100% · share of page height</span>
+              </div>
             </div>
 
-            <!-- Zoom (out to 10%) -->
+            <!-- Zoom -->
             <div class="slider-group">
               <div class="slider-header">
                 <label>Zoom</label>
                 <span class="value-display" id="zoomVal">100%</span>
               </div>
               <input type="range" class="slider" id="zoomSlider" min="10" max="300" value="100" step="5">
-              <div class="info-text" style="margin-top:4px;">Below 100% reveals white paper around the image.</div>
             </div>
 
             <!-- Vertical offset -->
@@ -500,11 +556,6 @@
           <div class="export-status" id="exportStatus"></div>
           <div class="info-text" style="margin-top:8px;">Exports at 300 DPI.</div>
         </div>
-
-        <div class="preview-chip">
-          <span class="preview-indicator"></span>
-          <span>Page preview · <span id="previewFormat">letter</span></span>
-        </div>
       </div>
     </div>
   </div>
@@ -522,15 +573,20 @@
 
   <script>
     (function() {
+      // ---- state ----
       // Each image: { src, name, weight, offsetY, offsetX, zoom, fitMode }
-      // weight: flex-grow value (relative share of page height). Default 1.
-      // zoom: 10-300 (%). Below 100 => image smaller than slot, white shows through.
-      // fitMode: 'cover' | 'contain' — determines base sizing before zoom.
-      // offsetX/offsetY: -100..100 % of slot dims
+      // weight: relative share, stored as raw value but UI shows % of total.
       let images = [];
-      let selectedIndex = -1;
+      let selectedIndices = new Set(); // multi-select
+      let lastClickedIndex = -1;       // for shift-range / ctrl toggling
       const maxImages = 4;
 
+      // undo/redo
+      let history = [];
+      let historyIndex = -1;
+      let isRestoring = false;
+
+      // ---- element refs ----
       const pageComposer = document.getElementById('pageComposer');
       const fileInput = document.getElementById('fileInput');
       const uploadBtn = document.getElementById('uploadBtn');
@@ -555,8 +611,10 @@
       const noSelectionMsg = document.getElementById('noSelectionMsg');
       const adjustControls = document.getElementById('adjustControls');
       const adjustLayerNum = document.getElementById('adjustLayerNum');
+      const adjustMultiBadge = document.getElementById('adjustMultiBadge');
       const weightSlider = document.getElementById('weightSlider');
       const weightVal = document.getElementById('weightVal');
+      const weightHint = document.getElementById('weightHint');
       const zoomSlider = document.getElementById('zoomSlider');
       const zoomVal = document.getElementById('zoomVal');
       const offsetSlider = document.getElementById('offsetSlider');
@@ -566,13 +624,16 @@
       const resetLayerBtn = document.getElementById('resetLayerBtn');
       const deleteLayerBtn = document.getElementById('deleteLayerBtn');
 
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const undoCount = document.getElementById('undoCount');
+      const multiCount = document.getElementById('multiCount');
+
       let currentOrientation = 'portrait';
       let currentFormat = 'letter';
 
-      // ----- NATURAL IMAGE DIMENSIONS CACHE -----
-      // We need to know the image's natural aspect to compute cover/contain base size.
+      // ---- natural size cache ----
       const naturalSizes = new Map();
-
       function cacheNaturalSize(src) {
         if (naturalSizes.has(src)) return Promise.resolve(naturalSizes.get(src));
         return new Promise((resolve) => {
@@ -587,45 +648,151 @@
         });
       }
 
-      // ----- RENDER PREVIEW -----
+      // ---- history ----
+      function snapshotState() {
+        return {
+          images: images.map(img => ({ ...img })),
+          selectedIndices: new Set(selectedIndices),
+          currentOrientation,
+          currentFormat
+        };
+      }
+
+      function pushHistory() {
+        if (isRestoring) return;
+        // truncate future
+        if (historyIndex < history.length - 1) {
+          history = history.slice(0, historyIndex + 1);
+        }
+        history.push(snapshotState());
+        historyIndex = history.length - 1;
+        // cap size
+        if (history.length > 60) {
+          history.shift();
+          historyIndex--;
+        }
+        updateUndoUI();
+      }
+
+      function restoreState(state) {
+        isRestoring = true;
+        images = state.images.map(img => ({ ...img }));
+        selectedIndices = new Set(state.selectedIndices);
+        currentOrientation = state.currentOrientation;
+        currentFormat = state.currentFormat;
+
+        // update UI
+        directionToggle.querySelectorAll('button').forEach(b => {
+          b.classList.toggle('active', b.dataset.dir === currentOrientation);
+        });
+        paperFormatSelect.value = currentFormat;
+        updatePaperStyle();
+        renderPage();
+        isRestoring = false;
+        updateUndoUI();
+      }
+
+      function undo() {
+        if (historyIndex > 0) {
+          historyIndex--;
+          restoreState(history[historyIndex]);
+        }
+      }
+
+      function redo() {
+        if (historyIndex < history.length - 1) {
+          historyIndex++;
+          restoreState(history[historyIndex]);
+        }
+      }
+
+      function updateUndoUI() {
+        undoBtn.disabled = historyIndex <= 0;
+        redoBtn.disabled = historyIndex >= history.length - 1;
+        undoCount.textContent = `${historyIndex + 1}/${history.length}`;
+      }
+
+      // initialise history with empty state
+      function initHistory() {
+        history = [snapshotState()];
+        historyIndex = 0;
+        updateUndoUI();
+      }
+
+      // ---- helpers ----
+      function getWeightPercentage(index) {
+        const total = images.reduce((s, i) => s + (i.weight || 1), 0);
+        if (total === 0) return 0;
+        return ((images[index].weight || 1) / total) * 100;
+      }
+
+      function setWeightFromPercentage(targetIndex, pct) {
+        // pct is 0-100, but we allow up to 100 (others will shrink)
+        // We'll compute raw weight for target so that its share equals pct,
+        // assuming all other weights stay as-is (but we scale others to keep total = 100 raw * something)
+        // Simpler: let raw = pct (0-100), and keep others but scale them so total = 100? That's messy.
+        // Alternative: weights are arbitrary; we just adjust target raw so its share becomes pct.
+        // Let totalOther = sum of other weights. We want: w_target / (w_target + totalOther) = pct/100
+        // => w_target * (1 - pct/100) = (pct/100) * totalOther
+        // => w_target = (pct/100 * totalOther) / (1 - pct/100)
+        if (pct <= 0) pct = 1;
+        if (pct >= 100) pct = 99;
+        const totalOther = images.reduce((s, img, i) => i === targetIndex ? s : s + (img.weight || 1), 0);
+        if (totalOther === 0) {
+          // only one layer, set to 1 (100%)
+          images[targetIndex].weight = 1;
+          return;
+        }
+        const ratio = pct / 100;
+        const newWeight = (ratio * totalOther) / (1 - ratio);
+        images[targetIndex].weight = newWeight;
+      }
+
+      // ---- render preview ----
       function renderPage() {
         pageComposer.innerHTML = '';
         const count = images.length;
         layerCountSpan.textContent = count;
-        exportBtn.disabled = count === 0;
+
+        // update multi count badge
+        const multiSelCount = selectedIndices.size;
+        multiCount.textContent = multiSelCount;
+        multiCount.classList.toggle('visible', multiSelCount > 1);
 
         if (count === 0) {
           const emptyDiv = document.createElement('div');
           emptyDiv.className = 'empty-layer';
-          emptyDiv.textContent = 'No images — click "Choose images"';
+          emptyDiv.textContent = 'No images — click "Open Files"';
           pageComposer.appendChild(emptyDiv);
           renderLayerList();
           updateAdjustPanel();
+          exportBtn.disabled = true;
           return;
         }
 
+        exportBtn.disabled = false;
+
         images.forEach((img, index) => {
           const slot = document.createElement('div');
-          slot.className = 'layer-slot' + (index === selectedIndex ? ' selected' : '');
+          slot.className = 'layer-slot';
+          if (selectedIndices.has(index)) {
+            slot.classList.add('selected');
+            if (selectedIndices.size > 1) slot.classList.add('multi-selected');
+          }
           slot.dataset.index = index;
 
-          // flex weight controls vertical share
           slot.style.flexGrow = img.weight || 1;
           slot.style.flexBasis = '0';
           slot.style.flexShrink = '0';
 
-          // the image
           const imgEl = document.createElement('img');
           imgEl.className = 'layer-img';
           imgEl.src = img.src;
           imgEl.alt = img.name || `layer ${index + 1}`;
           imgEl.draggable = false;
 
-          // we need to size the image based on slot dims + zoom + fitMode
-          // since slot dims aren't known until layout, use a resize observer
           slot.appendChild(imgEl);
 
-          // divider line
           const div = document.createElement('div');
           div.className = 'slot-divider';
           slot.appendChild(div);
@@ -640,12 +807,10 @@
           hint.textContent = 'drag to move';
           slot.appendChild(hint);
 
-          // click to select
-          slot.addEventListener('click', () => {
-            selectedIndex = index;
-            renderPage();
-            renderLayerList();
-            updateAdjustPanel();
+          // click to select (with modifier keys)
+          slot.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleLayerClick(index, e);
           });
 
           // drag to reposition
@@ -656,13 +821,18 @@
 
           slot.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
-            if (selectedIndex !== index) {
-              selectedIndex = index;
+            // if not selected, select it first
+            if (!selectedIndices.has(index)) {
+              selectedIndices.clear();
+              selectedIndices.add(index);
+              lastClickedIndex = index;
               renderPage();
               renderLayerList();
               updateAdjustPanel();
               return;
             }
+            // only start drag if we have selection and primary is this one
+            // (allow drag when single-selected or multi but starting on this)
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
@@ -688,7 +858,7 @@
 
             positionImageInSlot(imgEl, slot, images[index]);
 
-            if (selectedIndex === index) {
+            if (selectedIndices.has(index) && selectedIndices.size === 1) {
               offsetSlider.value = newOffY;
               offsetVal.textContent = newOffY + '%';
               hOffsetSlider.value = newOffX;
@@ -700,13 +870,13 @@
             if (isDragging) {
               isDragging = false;
               document.body.style.cursor = '';
+              pushHistory();
             }
           });
 
           pageComposer.appendChild(slot);
         });
 
-        // After layout, position all images based on their slot sizes
         requestAnimationFrame(() => {
           const slots = pageComposer.querySelectorAll('.layer-slot');
           slots.forEach((slot, i) => {
@@ -721,11 +891,47 @@
         updateAdjustPanel();
       }
 
-      // ----- SIZE & POSITION IMAGE WITHIN SLOT -----
-      // Applies fitMode + zoom + offset.
-      // The image is absolutely positioned, centered at 50%/50%, and given
-      // explicit pixel width/height based on slot dims so that white paper
-      // shows through when zoomed out or fit=contain.
+      // ---- click handling ----
+      function handleLayerClick(index, e) {
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
+
+        if (isShift && lastClickedIndex >= 0) {
+          // range select
+          const start = Math.min(lastClickedIndex, index);
+          const end = Math.max(lastClickedIndex, index);
+          if (!isCtrl) selectedIndices.clear();
+          for (let i = start; i <= end; i++) {
+            selectedIndices.add(i);
+          }
+        } else if (isCtrl) {
+          // toggle
+          if (selectedIndices.has(index)) {
+            selectedIndices.delete(index);
+          } else {
+            selectedIndices.add(index);
+          }
+          lastClickedIndex = index;
+        } else {
+          // single select
+          selectedIndices.clear();
+          selectedIndices.add(index);
+          lastClickedIndex = index;
+        }
+
+        // ensure not empty
+        if (selectedIndices.size === 0) {
+          selectedIndices.add(index);
+          lastClickedIndex = index;
+        }
+
+        renderPage();
+        renderLayerList();
+        updateAdjustPanel();
+        pushHistory();
+      }
+
+      // ---- size & position image ----
       function positionImageInSlot(imgEl, slot, data) {
         const slotW = slot.clientWidth;
         const slotH = slot.clientHeight;
@@ -733,7 +939,6 @@
 
         const natural = naturalSizes.get(data.src);
         if (!natural) {
-          // Not cached yet — load and retry
           cacheNaturalSize(data.src).then(() => {
             positionImageInSlot(imgEl, slot, data);
           });
@@ -745,7 +950,6 @@
 
         let baseW, baseH;
         if (data.fitMode === 'contain') {
-          // fit entirely inside slot
           if (imgAspect > slotAspect) {
             baseW = slotW;
             baseH = slotW / imgAspect;
@@ -754,7 +958,6 @@
             baseW = slotH * imgAspect;
           }
         } else {
-          // cover — fill slot, may overflow
           if (imgAspect > slotAspect) {
             baseH = slotH;
             baseW = slotH * imgAspect;
@@ -768,11 +971,9 @@
         const finalW = baseW * zoom;
         const finalH = baseH * zoom;
 
-        // offset in pixels
         const offX = ((data.offsetX || 0) / 100) * slotW;
         const offY = ((data.offsetY || 0) / 100) * slotH;
 
-        // Center at 50%/50% then apply offset
         imgEl.style.width = finalW + 'px';
         imgEl.style.height = finalH + 'px';
         imgEl.style.left = '50%';
@@ -780,7 +981,7 @@
         imgEl.style.transform = `translate(-50%, -50%) translate(${offX}px, ${offY}px)`;
       }
 
-      // ----- RENDER LAYER LIST -----
+      // ---- render layer list ----
       function renderLayerList() {
         layerList.innerHTML = '';
         if (images.length === 0) {
@@ -795,7 +996,11 @@
 
         images.forEach((img, index) => {
           const item = document.createElement('div');
-          item.className = 'layer-item' + (index === selectedIndex ? ' selected' : '');
+          item.className = 'layer-item';
+          if (selectedIndices.has(index)) {
+            item.classList.add('selected');
+            if (selectedIndices.size > 1) item.classList.add('multi-selected');
+          }
           item.dataset.index = index;
 
           const thumb = document.createElement('img');
@@ -814,9 +1019,10 @@
           name.textContent = img.name || 'layer ' + (index + 1);
           item.appendChild(name);
 
+          const pct = getWeightPercentage(index);
           const weight = document.createElement('span');
           weight.className = 'weight-badge';
-          weight.textContent = (img.weight || 1).toFixed(2);
+          weight.textContent = pct.toFixed(0) + '%';
           item.appendChild(weight);
 
           const actions = document.createElement('div');
@@ -830,9 +1036,18 @@
             e.stopPropagation();
             if (index > 0) {
               [images[index - 1], images[index]] = [images[index], images[index - 1]];
-              if (selectedIndex === index) selectedIndex = index - 1;
-              else if (selectedIndex === index - 1) selectedIndex = index;
+              // remap selection
+              const newSel = new Set();
+              selectedIndices.forEach(i => {
+                if (i === index) newSel.add(index - 1);
+                else if (i === index - 1) newSel.add(index);
+                else newSel.add(i);
+              });
+              selectedIndices = newSel;
+              if (lastClickedIndex === index) lastClickedIndex = index - 1;
+              else if (lastClickedIndex === index - 1) lastClickedIndex = index;
               renderPage();
+              pushHistory();
             }
           });
           actions.appendChild(upBtn);
@@ -845,70 +1060,94 @@
             e.stopPropagation();
             if (index < images.length - 1) {
               [images[index + 1], images[index]] = [images[index], images[index + 1]];
-              if (selectedIndex === index) selectedIndex = index + 1;
-              else if (selectedIndex === index + 1) selectedIndex = index;
+              const newSel = new Set();
+              selectedIndices.forEach(i => {
+                if (i === index) newSel.add(index + 1);
+                else if (i === index + 1) newSel.add(index);
+                else newSel.add(i);
+              });
+              selectedIndices = newSel;
+              if (lastClickedIndex === index) lastClickedIndex = index + 1;
+              else if (lastClickedIndex === index + 1) lastClickedIndex = index;
               renderPage();
+              pushHistory();
             }
           });
           actions.appendChild(downBtn);
 
           item.appendChild(actions);
 
-          item.addEventListener('click', () => {
-            selectedIndex = index;
-            renderPage();
-            renderLayerList();
-            updateAdjustPanel();
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleLayerClick(index, e);
           });
 
           layerList.appendChild(item);
         });
       }
 
-      // ----- UPDATE ADJUST PANEL -----
+      // ---- update adjust panel (multi-aware) ----
       function updateAdjustPanel() {
-        if (selectedIndex < 0 || selectedIndex >= images.length) {
+        const count = selectedIndices.size;
+        if (count === 0) {
           noSelectionMsg.style.display = 'block';
           adjustControls.style.display = 'none';
           adjustLayerNum.textContent = '—';
+          adjustMultiBadge.classList.remove('visible');
           return;
         }
 
         noSelectionMsg.style.display = 'none';
         adjustControls.style.display = 'block';
-        adjustLayerNum.textContent = '#' + (selectedIndex + 1);
 
-        const img = images[selectedIndex];
-        weightSlider.value = Math.round((img.weight || 1) * 100);
-        weightVal.textContent = (img.weight || 1).toFixed(2);
-        zoomSlider.value = img.zoom || 100;
-        zoomVal.textContent = (img.zoom || 100) + '%';
-        offsetSlider.value = img.offsetY || 0;
-        offsetVal.textContent = (img.offsetY || 0) + '%';
-        hOffsetSlider.value = img.offsetX || 0;
-        hOffsetVal.textContent = (img.offsetX || 0) + '%';
+        const indices = Array.from(selectedIndices).sort((a,b)=>a-b);
+        const primary = indices[0];
+        const isMulti = indices.length > 1;
+
+        adjustLayerNum.textContent = isMulti
+          ? `${indices.length} layers`
+          : '#' + (primary + 1);
+        adjustMultiBadge.classList.toggle('visible', isMulti);
+
+        // weight display: show percentage of primary (or mixed if multi)
+        if (isMulti) {
+          // check if all have same weight? just show "—"
+          weightVal.textContent = 'mixed';
+          weightHint.textContent = 'Adjusting weight will set the same % for all selected.';
+        } else {
+          const pct = getWeightPercentage(primary);
+          weightVal.textContent = pct.toFixed(0) + '%';
+          weightHint.textContent = `${pct.toFixed(0)}% share of page height. Neighbors adjust automatically.`;
+        }
+
+        // sliders: show primary's values if single, or first if multi
+        const ref = images[primary];
+        weightSlider.value = Math.round(getWeightPercentage(primary));
+        zoomSlider.value = ref.zoom || 100;
+        zoomVal.textContent = (ref.zoom || 100) + '%';
+        offsetSlider.value = ref.offsetY || 0;
+        offsetVal.textContent = (ref.offsetY || 0) + '%';
+        hOffsetSlider.value = ref.offsetX || 0;
+        hOffsetVal.textContent = (ref.offsetX || 0) + '%';
 
         // fit mode buttons
         const fitBtns = adjustControls.querySelectorAll('[data-fit]');
         fitBtns.forEach(b => {
-          b.classList.toggle('active', b.dataset.fit === (img.fitMode || 'cover'));
+          b.classList.toggle('active', b.dataset.fit === (ref.fitMode || 'cover'));
         });
       }
 
-      // ----- UPDATE SELECTED LAYER PROP -----
-      function updateSelectedLayer(prop, value) {
-        if (selectedIndex < 0 || selectedIndex >= images.length) return;
-        images[selectedIndex][prop] = value;
-
-        const slots = pageComposer.querySelectorAll('.layer-slot');
-        const slot = slots[selectedIndex];
-        if (!slot) return;
-        const imgEl = slot.querySelector('.layer-img');
+      // ---- update selected layers (multi-aware) ----
+      function updateSelectedLayers(prop, value) {
+        if (selectedIndices.size === 0) return;
+        const indices = Array.from(selectedIndices);
 
         if (prop === 'weight') {
-          slot.style.flexGrow = value;
-          weightVal.textContent = value.toFixed(2);
-          // reposition all images because slot sizes changed
+          // value is percentage (0-100) from slider
+          indices.forEach(idx => {
+            setWeightFromPercentage(idx, value);
+          });
+          // reposition all slots
           requestAnimationFrame(() => {
             const allSlots = pageComposer.querySelectorAll('.layer-slot');
             allSlots.forEach((s, i) => {
@@ -916,20 +1155,39 @@
               if (ie && images[i]) positionImageInSlot(ie, s, images[i]);
             });
           });
+          renderPage(); // re-render to update flex-grow
+          // update display
+          if (indices.length === 1) {
+            const pct = getWeightPercentage(indices[0]);
+            weightVal.textContent = pct.toFixed(0) + '%';
+            weightHint.textContent = `${pct.toFixed(0)}% share of page height. Neighbors adjust automatically.`;
+          }
           renderLayerList();
+          pushHistory();
           return;
         }
 
-        if (imgEl) {
-          positionImageInSlot(imgEl, slot, images[selectedIndex]);
-        }
+        indices.forEach(idx => {
+          images[idx][prop] = value;
+        });
+
+        // update visuals for all selected
+        indices.forEach(idx => {
+          const slots = pageComposer.querySelectorAll('.layer-slot');
+          const slot = slots[idx];
+          if (!slot) return;
+          const imgEl = slot.querySelector('.layer-img');
+          if (imgEl) positionImageInSlot(imgEl, slot, images[idx]);
+        });
 
         if (prop === 'zoom') zoomVal.textContent = value + '%';
         if (prop === 'offsetY') offsetVal.textContent = value + '%';
         if (prop === 'offsetX') hOffsetVal.textContent = value + '%';
+
+        pushHistory();
       }
 
-      // ----- ADD / REMOVE -----
+      // ---- add / remove ----
       function addImages(files) {
         const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
         if (!fileList.length) return;
@@ -958,8 +1216,13 @@
             });
             loaded++;
             if (loaded === toAdd.length) {
-              if (selectedIndex < 0) selectedIndex = 0;
+              // auto select first new image if nothing selected
+              if (selectedIndices.size === 0 && images.length > 0) {
+                selectedIndices.add(0);
+                lastClickedIndex = 0;
+              }
               renderPage();
+              pushHistory();
             }
           };
           reader.readAsDataURL(file);
@@ -972,40 +1235,54 @@
 
       function removeLastImage() {
         if (images.length === 0) return;
+        const removedIndex = images.length - 1;
         images.pop();
-        if (selectedIndex >= images.length) selectedIndex = images.length - 1;
+        selectedIndices.delete(removedIndex);
+        // remap selection indices > removedIndex
+        const newSel = new Set();
+        selectedIndices.forEach(i => {
+          if (i < removedIndex) newSel.add(i);
+        });
+        selectedIndices = newSel;
+        if (selectedIndices.size === 0 && images.length > 0) {
+          selectedIndices.add(0);
+          lastClickedIndex = 0;
+        }
+        if (lastClickedIndex >= images.length) lastClickedIndex = images.length - 1;
         renderPage();
+        pushHistory();
       }
 
       function clearAll() {
         if (images.length === 0) return;
         if (confirm('Clear all images?')) {
           images = [];
-          selectedIndex = -1;
+          selectedIndices.clear();
+          lastClickedIndex = -1;
           renderPage();
+          pushHistory();
         }
       }
 
-      // ----- PRESETS -----
+      // ---- presets ----
       function applyPreset(name) {
         if (images.length === 0) return;
         const n = images.length;
         if (name === 'equal') {
           images.forEach(i => i.weight = 1);
         } else if (name === 'top-heavy') {
-          // first image gets more
           images.forEach((img, i) => img.weight = (n - i));
         } else if (name === 'bottom-heavy') {
           images.forEach((img, i) => img.weight = (i + 1));
         } else if (name === 'center-focus') {
-          // middle gets more
           const mid = (n - 1) / 2;
           images.forEach((img, i) => img.weight = 1 + Math.max(0, 1.5 - Math.abs(i - mid)));
         }
         renderPage();
+        pushHistory();
       }
 
-      // ----- PAPER STYLE -----
+      // ---- paper style ----
       function updatePaperStyle() {
         pageComposer.classList.remove('landscape', 'a4');
         if (currentFormat === 'a4') pageComposer.classList.add('a4');
@@ -1017,7 +1294,6 @@
         paperBadge.textContent = label;
         previewFormat.textContent = currentFormat + (currentOrientation === 'landscape' ? ' landscape' : '');
 
-        // reposition images after aspect change
         requestAnimationFrame(() => {
           const slots = pageComposer.querySelectorAll('.layer-slot');
           slots.forEach((s, i) => {
@@ -1027,7 +1303,7 @@
         });
       }
 
-      // ----- EXPORT -----
+      // ---- export ----
       function getExportDimensions() {
         if (currentFormat === 'letter') {
           return currentOrientation === 'portrait'
@@ -1066,14 +1342,12 @@
           canvas.height = height;
           const ctx = canvas.getContext('2d');
 
-          // White paper background
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, width, height);
 
           exportStatus.textContent = 'Loading images...';
           const loadedImages = await Promise.all(images.map(img => loadImage(img.src)));
 
-          // Compute slot heights from weights
           const totalWeight = images.reduce((s, i) => s + (i.weight || 1), 0);
           const slotHeights = images.map(i => ((i.weight || 1) / totalWeight) * height);
 
@@ -1118,7 +1392,6 @@
             const drawX = slotW / 2 - finalW / 2 + offX;
             const drawY = slotY + slotH / 2 - finalH / 2 + offY;
 
-            // Clip to slot so image can't bleed into neighbor
             ctx.save();
             ctx.beginPath();
             ctx.rect(0, slotY, slotW, slotH);
@@ -1162,7 +1435,7 @@
         }
       }
 
-      // ----- EVENT LISTENERS -----
+      // ---- event listeners ----
       uploadBtn.addEventListener('click', () => fileInput.click());
       fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) {
@@ -1179,52 +1452,68 @@
       removeLastBtn.addEventListener('click', removeLastImage);
 
       weightSlider.addEventListener('input', (e) => {
-        updateSelectedLayer('weight', parseInt(e.target.value) / 100);
+        const pct = parseInt(e.target.value);
+        updateSelectedLayers('weight', pct);
       });
       zoomSlider.addEventListener('input', (e) => {
-        updateSelectedLayer('zoom', parseInt(e.target.value));
+        updateSelectedLayers('zoom', parseInt(e.target.value));
       });
       offsetSlider.addEventListener('input', (e) => {
-        updateSelectedLayer('offsetY', parseInt(e.target.value));
+        updateSelectedLayers('offsetY', parseInt(e.target.value));
       });
       hOffsetSlider.addEventListener('input', (e) => {
-        updateSelectedLayer('offsetX', parseInt(e.target.value));
+        updateSelectedLayers('offsetX', parseInt(e.target.value));
       });
 
-      // fit mode buttons
       adjustControls.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-fit]');
         if (!btn) return;
-        if (selectedIndex < 0 || selectedIndex >= images.length) return;
-        images[selectedIndex].fitMode = btn.dataset.fit;
-        const slots = pageComposer.querySelectorAll('.layer-slot');
-        const slot = slots[selectedIndex];
-        if (slot) {
-          const imgEl = slot.querySelector('.layer-img');
-          if (imgEl) positionImageInSlot(imgEl, slot, images[selectedIndex]);
-        }
+        if (selectedIndices.size === 0) return;
+        const mode = btn.dataset.fit;
+        Array.from(selectedIndices).forEach(idx => {
+          images[idx].fitMode = mode;
+          const slots = pageComposer.querySelectorAll('.layer-slot');
+          const slot = slots[idx];
+          if (slot) {
+            const imgEl = slot.querySelector('.layer-img');
+            if (imgEl) positionImageInSlot(imgEl, slot, images[idx]);
+          }
+        });
         updateAdjustPanel();
+        pushHistory();
       });
 
-      // preset buttons
       document.querySelectorAll('[data-preset]').forEach(btn => {
         btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
       });
 
       resetLayerBtn.addEventListener('click', () => {
-        if (selectedIndex < 0 || selectedIndex >= images.length) return;
-        Object.assign(images[selectedIndex], {
-          weight: 1, offsetY: 0, offsetX: 0, zoom: 100, fitMode: 'cover'
+        if (selectedIndices.size === 0) return;
+        Array.from(selectedIndices).forEach(idx => {
+          Object.assign(images[idx], {
+            weight: 1, offsetY: 0, offsetX: 0, zoom: 100, fitMode: 'cover'
+          });
         });
         renderPage();
+        pushHistory();
       });
 
       deleteLayerBtn.addEventListener('click', () => {
-        if (selectedIndex < 0 || selectedIndex >= images.length) return;
-        if (!confirm('Delete this layer?')) return;
-        images.splice(selectedIndex, 1);
-        if (selectedIndex >= images.length) selectedIndex = images.length - 1;
+        if (selectedIndices.size === 0) return;
+        const count = selectedIndices.size;
+        if (!confirm(`Delete ${count} layer${count > 1 ? 's' : ''}?`)) return;
+        // remove in reverse order to keep indices valid
+        const sorted = Array.from(selectedIndices).sort((a,b)=>b-a);
+        sorted.forEach(idx => images.splice(idx, 1));
+        selectedIndices.clear();
+        if (images.length > 0) {
+          selectedIndices.add(0);
+          lastClickedIndex = 0;
+        } else {
+          lastClickedIndex = -1;
+        }
         renderPage();
+        pushHistory();
       });
 
       directionToggle.addEventListener('click', (e) => {
@@ -1236,11 +1525,13 @@
         btn.classList.add('active');
         currentOrientation = dir;
         updatePaperStyle();
+        pushHistory();
       });
 
       paperFormatSelect.addEventListener('change', (e) => {
         currentFormat = e.target.value;
         updatePaperStyle();
+        pushHistory();
       });
 
       exportBtn.addEventListener('click', () => {
@@ -1266,7 +1557,6 @@
         if (e.dataTransfer.files.length) addImages(e.dataTransfer.files);
       });
 
-      // reposition on window resize
       window.addEventListener('resize', () => {
         const slots = pageComposer.querySelectorAll('.layer-slot');
         slots.forEach((s, i) => {
@@ -1275,16 +1565,35 @@
         });
       });
 
+      // keyboard shortcuts
       window.addEventListener('keydown', (e) => {
+        // undo/redo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          undo();
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) {
+          e.preventDefault();
+          redo();
+          return;
+        }
         if (e.key === 'Escape') {
-          selectedIndex = -1;
+          selectedIndices.clear();
+          lastClickedIndex = -1;
           renderPage();
+          renderLayerList();
+          updateAdjustPanel();
         }
       });
 
-      // init
+      undoBtn.addEventListener('click', undo);
+      redoBtn.addEventListener('click', redo);
+
+      // ---- init ----
       updatePaperStyle();
       renderPage();
+      initHistory();
     })();
   </script>
 </body>

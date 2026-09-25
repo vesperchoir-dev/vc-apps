@@ -1030,6 +1030,7 @@
                 );
                 updateHistogram();
             }
+            toggleSel = 0;
         }
 
         function updateSelectedCount(count) {
@@ -1151,6 +1152,7 @@
             isSelectionActive = true;
             hasSelectedColor = true;
             updateSelectedCount(countNonZero(selectionMask));
+            toggleSel = 1;
         }
 
         function countNonZero(mask) {
@@ -1167,14 +1169,12 @@
             visualizeSelection();
             isSelectionActive = true;
             updateSelectedCount(countNonZero(selectionMask));
-			toggleSel = 1;
         }
 
         function livePreviewLevels() {
             if (!originalImageData) return;
             applyLevelsToCanvas();
             updateHistogram();
-			toggleSel = 0;
         }
 
         // ============ SPLIT LISTENERS ============
@@ -1629,8 +1629,8 @@
             pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
             isMultiImageMode = false; imageFiles = [];
             document.getElementById('pageNavigation').style.display = 'flex';
-            document.getElementById('pageStatus').style.display = 'block';]
-			currentFileName = file.name.replace(/\.[^.]+$/, '');
+            document.getElementById('pageStatus').style.display = 'block';
+            currentFileName = file.name.replace(/\.[^.]+$/, '');
             await loadPDFPage(1);
         }
 
@@ -1642,7 +1642,7 @@
             pdfPages = []; editedPages = {}; pageSplitSettings = {}; pageCropSettings = {};
             document.getElementById('pageNavigation').style.display = 'flex';
             document.getElementById('pageStatus').style.display = 'block';
-			currentFileName = files[0].name.replace(/\.[^.]+$/, '');
+            currentFileName = files[0].name.replace(/\.[^.]+$/, '');
             for (let i = 0; i < imageOnlyFiles.length; i++) {
                 pdfPages[i + 1] = await loadImageToData(imageOnlyFiles[i]);
             }
@@ -1804,15 +1804,26 @@
                 isSelectionActive = true;
                 updateSelectedCount(countNonZero(selectionMask));
                 updateColorHint();
+                toggleSel = 1;
             }
         });
 		
-		function toggleSelection(){
-			if(toggleSel == 0){
-				livePreviewSelection();
-			}
-			else{
+		// toggleSel: 1 = showing selection overlay, 0 = showing levels result
+		function toggleSelection() {
+			if (!originalImageData) return;
+
+			if (toggleSel === 1) {
+				// Currently showing selection → switch to levels preview
 				livePreviewLevels();
+				toggleSel = 0;
+			} else {
+				// Currently showing levels → switch back to selection overlay
+				if (!hasSelectedColor) {
+					alert('Pick a color first to view the selection overlay');
+					return;
+				}
+				livePreviewSelection();
+				toggleSel = 1;
 			}
 		}
 		
